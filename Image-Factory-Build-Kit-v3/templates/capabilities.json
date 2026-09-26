@@ -1,0 +1,51 @@
+{
+  "checked_at": null,
+  "environment": null,
+  "evidence_base": null,
+  "features": {
+    "sol_high": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "luna_xhigh": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "subagents": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "goal_mode": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "native_image_visible": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "native_image_actual_file": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "native_transparent_output": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "headless_native_image": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "structured_worker_receipts": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "existing_typed_feishu_gateway": {
+      "status": "unknown",
+      "evidence": null
+    },
+    "feishu_page_configuration": {
+      "status": "unknown",
+      "evidence": null
+    }
+  }
+}

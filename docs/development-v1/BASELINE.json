@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-09-21T16:20:00+08:00",
+  "project_root": "/Users/frog/Projects/Image-Factory",
+  "version_control": {
+    "is_git_worktree": false,
+    "note": "项目根没有 .git；不能把 git diff 或 worktree 隔离作为证据。"
+  },
+  "authoritative_inputs": [
+    "AGENTS.md",
+    "README.md",
+    "docs/01-架构与边界.md",
+    "docs/04-数据契约.md",
+    "var/live/acceptance/acceptance.json",
+    "Image-Factory-Build-Kit-v3/START-CODEX.md",
+    "Image-Factory-Build-Kit-v3/docs/01-10"
+  ],
+  "existing_runtime": {
+    "ledger": "var/live/ledger.sqlite3",
+    "ledger_tables": ["effects", "events", "metadata", "runs"],
+    "run_count": 0,
+    "unknown_remote_write_count": 0,
+    "gateway": "factory/lark.py::FeishuGateway",
+    "typed_gateway_only": true
+  },
+  "live_read_only_baseline": {
+    "doctor": {
+      "status": "pass",
+      "python": "3.13.15",
+      "pillow": "12.3.0",
+      "lark_cli": "1.0.95",
+      "base_read_verified": true,
+      "native_image_verified": false
+    },
+    "schema_check": {"status": "pass", "tables": 8, "basis": "V1 变更前现役契约"},
+    "record_counts": {"products": 2, "assets": 22, "workflows": 1, "tasks": 3},
+    "v1_demo_namespace_records": 0,
+    "queue": {
+      "RUN-001": "待审核",
+      "RUN-002": "待审核（历史投影滞后；本轮不得修改）",
+      "RUN-003": "待生图"
+    }
+  },
+  "historical_acceptance": {
+    "ledger_sha256": "563a0bccfb53d69598badb3bed2f8700b38d7f6bd833a98e616cb5a109677031",
+    "offline_tests_recorded": 113,
+    "runs_preserved": ["RUN-001", "RUN-002", "RUN-003"]
+  },
+  "backup": {
+    "directory": "var/development-v1/backups/baseline-20260921T1615+0800",
+    "manifest": "var/development-v1/backups/baseline-20260921T1615+0800/SHA256SUMS.txt",
+    "items": [
+      "project-source.tgz",
+      "ledger.sqlite3",
+      "config.local.json",
+      "acceptance.json",
+      "base-before-v1-demo-20260921T1620.base"
+    ],
+    "base_export_sha256": "ede0ea498b02a81f8a58b7b0fe7ab319674ff4d0041ecf133491ebc249b03a21",
+    "contains_local_sensitive_config": true,
+    "policy": "备份只在 var/ 下本机保存，不进入交付 ZIP，不写 token/ticket 到文档。"
+  },
+  "test_baseline": {
+    "existing_authoritative_result": "var/live/acceptance/acceptance.json 记录 113 项通过",
+    "build_kit_reference": {"status": "pass", "evidence": "var/development-v1/baseline-build-kit-tests.txt"},
+    "concurrent_development_probe": {
+      "status": "invalid_as_clean_baseline",
+      "evidence": "var/development-v1/baseline-project-tests.txt",
+      "reason": "运行时 Luna 已先写 tests/test_runtime.py、尚未写 factory/runtime.py，故 113 个既有测试通过后仅新模块导入失败；最终全量测试替代此证据。"
+    }
+  }
+}

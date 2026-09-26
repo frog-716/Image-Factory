@@ -1,0 +1,36 @@
+{
+  "kind": "development_goal",
+  "goal_id": "BUILD-IMAGE-FACTORY-V1",
+  "category": "kids_shoes",
+  "development_roles": {
+    "controller": {
+      "requested_name": "Sol",
+      "requested_effort": "high",
+      "actual_model_id": null
+    },
+    "implementation": {
+      "requested_name": "Luna",
+      "requested_effort": "xhigh",
+      "actual_model_id": null
+    }
+  },
+  "runtime_owner": "independent_workflow_runtime",
+  "codex_runtime_role": "bounded_node_worker",
+  "non_goals": [
+    "generic workflow builder",
+    "new global credentials",
+    "paid API fallback",
+    "real publication",
+    "auto approval"
+  ],
+  "done_requires": [
+    "existing_project_regression",
+    "real_native_image_receipt",
+    "feishu_roundtrip",
+    "human_review",
+    "approved_zip",
+    "demo_metrics",
+    "thread_independent_resume"
+  ],
+  "auth_ref": null
+}

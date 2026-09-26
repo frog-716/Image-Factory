@@ -1,0 +1,14 @@
+{
+  "review_policy_version": "demo-v2",
+  "run_id": "V1-DEMO-KIDS-EXAMPLE",
+  "asset_id": null,
+  "sha256": null,
+  "mode": "demo",
+  "decision": null,
+  "actor_id": null,
+  "human_confirmed": false,
+  "demo_visual_ok": false,
+  "demo_use_only": false,
+  "reason": null,
+  "note": "Do not set production product_accuracy/brand_channel_ok to make a demo pass"
+}

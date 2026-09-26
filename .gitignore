@@ -1,0 +1,14 @@
+.venv/
+var/
+config.local.json
+config.*.local.json
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.*
+*.log
+/dist/
+*.zip
+/docs/product-v1/BASEAPP-CAPABILITIES.md
+/docs/product-v1/LIVE-IMPLEMENTATION.md

@@ -1,0 +1,453 @@
+{
+  "products": [
+    {
+      "record_id": "rec_products_00001",
+      "fields": {
+        "商品名": "DEMO 示例鞋形图",
+        "SKU": "DEMO-001",
+        "商品品牌": "DEMO",
+        "事实版本": "demo-v1",
+        "已确认事实": "这是程序画的示例轮廓，不对应任何真实商品。",
+        "禁止改变": "禁止冒充 TOPSTAR 实拍，禁止真实上架。",
+        "事实来源": "本工程演练生成器",
+        "资料已确认": true,
+        "示例数据": true,
+        "默认商品素材": [
+          "rec_assets_00001"
+        ]
+      }
+    }
+  ],
+  "assets": [
+    {
+      "record_id": "rec_assets_00001",
+      "fields": {
+        "素材名": "示例透明商品轮廓",
+        "资产ID": "DEMO-A01",
+        "类型": "商品原图",
+        "商品": [
+          "rec_products_00001"
+        ],
+        "来源说明": "程序绘制 DEMO",
+        "授权说明": "仅用于软件流程测试",
+        "允许用于生图": true,
+        "示例数据": true,
+        "SHA256": "c795bd4165e564deb2d2dc805066e20e50ba87d03a8c942f721e2ff41e4f2186",
+        "图片": [
+          {
+            "file_token": "file_c795bd4165e564deb2d2dc805066e20e50ba87d03a8c942f721e2ff41e4f2186",
+            "name": "demo-product.png",
+            "size": 4538
+          }
+        ]
+      }
+    },
+    {
+      "record_id": "rec_assets_00002",
+      "fields": {
+        "素材名": "run_0cfa3b784c2933752253_001_cac2830f",
+        "资产ID": "run_0cfa3b784c2933752253_001_cac2830f",
+        "类型": "生成成图",
+        "商品": [
+          "rec_products_00001"
+        ],
+        "来源任务": [
+          "rec_tasks_00001"
+        ],
+        "SHA256": "f749c1a9d473135392e83b835ee0b9ee6214e6f9fdc2b073138ea4f4305c0acd",
+        "示例数据": true,
+        "运行ID": "run_0cfa3b784c2933752253",
+        "槽位": "001",
+        "审核状态": "通过",
+        "来源说明": "由冻结任务及真实调用回执生成，参见任务运行档案。",
+        "允许用于生图": false,
+        "图片": [
+          {
+            "file_token": "file_f749c1a9d473135392e83b835ee0b9ee6214e6f9fdc2b073138ea4f4305c0acd",
+            "name": "f749c1a9d4731353_001.png",
+            "size": 49929
+          }
+        ],
+        "生产回执": [
+          {
+            "file_token": "file_73ebbfdc7bca8b1480e16b01683f6c7da361cecb7bbb2cdcc835fba3da5cf803",
+            "name": "001_try_ce1206ad0fd34ce89d5ce63ecac2830f.json",
+            "size": 449
+          }
+        ]
+      }
+    },
+    {
+      "record_id": "rec_assets_00003",
+      "fields": {
+        "素材名": "run_0cfa3b784c2933752253_002_7ecf7eba",
+        "资产ID": "run_0cfa3b784c2933752253_002_7ecf7eba",
+        "类型": "生成成图",
+        "商品": [
+          "rec_products_00001"
+        ],
+        "来源任务": [
+          "rec_tasks_00001"
+        ],
+        "SHA256": "127556390dd5139f63b46573d4a03ddbbb69c14e8905f78648b894c3e61e5dc2",
+        "示例数据": true,
+        "运行ID": "run_0cfa3b784c2933752253",
+        "槽位": "002",
+        "审核状态": "通过",
+        "来源说明": "由冻结任务及真实调用回执生成，参见任务运行档案。",
+        "允许用于生图": false,
+        "图片": [
+          {
+            "file_token": "file_127556390dd5139f63b46573d4a03ddbbb69c14e8905f78648b894c3e61e5dc2",
+            "name": "127556390dd5139f_002.png",
+            "size": 50070
+          }
+        ],
+        "生产回执": [
+          {
+            "file_token": "file_3bcb3ce0dffeda4147c61df17178265e8757c3df9bd20a9bbeb424b9c03b33c6",
+            "name": "002_try_ecdbd527295a4a97a49cf9ee7ecf7eba.json",
+            "size": 449
+          }
+        ]
+      }
+    },
+    {
+      "record_id": "rec_assets_00004",
+      "fields": {
+        "素材名": "run_0cfa3b784c2933752253_003_4f242b98",
+        "资产ID": "run_0cfa3b784c2933752253_003_4f242b98",
+        "类型": "生成成图",
+        "商品": [
+          "rec_products_00001"
+        ],
+        "来源任务": [
+          "rec_tasks_00001"
+        ],
+        "SHA256": "5b2c6b9d93b858a9ae88d1c7247c3643aaba72c6f3c18c8da11f9bdfc000538b",
+        "示例数据": true,
+        "运行ID": "run_0cfa3b784c2933752253",
+        "槽位": "003",
+        "审核状态": "驳回",
+        "来源说明": "由冻结任务及真实调用回执生成，参见任务运行档案。",
+        "允许用于生图": false,
+        "图片": [
+          {
+            "file_token": "file_5b2c6b9d93b858a9ae88d1c7247c3643aaba72c6f3c18c8da11f9bdfc000538b",
+            "name": "5b2c6b9d93b858a9_003.png",
+            "size": 50044
+          }
+        ],
+        "生产回执": [
+          {
+            "file_token": "file_8e716a63e7734d830d01787a7ddc081de6ac3100dc2fa34ca7c91611c0ecea15",
+            "name": "003_try_b2319c503d0f4af4b371c0624f242b98.json",
+            "size": 449
+          }
+        ]
+      }
+    }
+  ],
+  "workflows": [
+    {
+      "record_id": "rec_workflows_00001",
+      "fields": {
+        "流程名": "[IF] 背景合成 v1.0",
+        "版本": "1.0",
+        "生产方式": "背景合成",
+        "已发布": true,
+        "说明": "生成背景后叠加透明商品原图，不重绘商品。仅用于经人工确认允许此类表达的场景图或广告图。",
+        "输出宽度": 1024,
+        "输出高度": 1024,
+        "商品占画布比例": 0.7,
+        "示例数据": false
+      }
+    }
+  ],
+  "steps": [
+    {
+      "record_id": "rec_steps_00001",
+      "fields": {
+        "步骤名": "[IF] 背景合成 v1.0 / 01 提示词",
+        "顺序": 1,
+        "节点类型": "提示词",
+        "提示词模板": "任务：${purpose}。渠道：${channel}。页面版位：${placement}。画面中的消费场景：${scene}。视觉风格：${style}。${variant}。",
+        "启用": true,
+        "流程": [
+          "rec_workflows_00001"
+        ]
+      }
+    },
+    {
+      "record_id": "rec_steps_00002",
+      "fields": {
+        "步骤名": "[IF] 背景合成 v1.0 / 02 提示词",
+        "顺序": 2,
+        "节点类型": "提示词",
+        "提示词模板": "背景会承载 ${product_name}。商品事实仅供理解，不能增造：${facts}。保留规则：${rules}。附加创意要求：${requirements}。只绘背景，商品后贴，中心偏下保持干净。",
+        "启用": true,
+        "流程": [
+          "rec_workflows_00001"
+        ]
+      }
+    },
+    {
+      "record_id": "rec_steps_00003",
+      "fields": {
+        "步骤名": "[IF] 背景合成 v1.0 / 03 生图",
+        "顺序": 3,
+        "节点类型": "生图",
+        "提示词模板": "",
+        "启用": true,
+        "流程": [
+          "rec_workflows_00001"
+        ]
+      }
+    },
+    {
+      "record_id": "rec_steps_00004",
+      "fields": {
+        "步骤名": "[IF] 背景合成 v1.0 / 04 原图合成",
+        "顺序": 4,
+        "节点类型": "原图合成",
+        "提示词模板": "",
+        "启用": true,
+        "流程": [
+          "rec_workflows_00001"
+        ]
+      }
+    },
+    {
+      "record_id": "rec_steps_00005",
+      "fields": {
+        "步骤名": "[IF] 背景合成 v1.0 / 05 文件检查",
+        "顺序": 5,
+        "节点类型": "文件检查",
+        "提示词模板": "",
+        "启用": true,
+        "流程": [
+          "rec_workflows_00001"
+        ]
+      }
+    },
+    {
+      "record_id": "rec_steps_00006",
+      "fields": {
+        "步骤名": "[IF] 背景合成 v1.0 / 06 人工审核",
+        "顺序": 6,
+        "节点类型": "人工审核",
+        "提示词模板": "",
+        "启用": true,
+        "流程": [
+          "rec_workflows_00001"
+        ]
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "record_id": "rec_tasks_00001",
+      "fields": {
+        "任务名": "演练：3 张候选、2 张批准",
+        "商品": [
+          "rec_products_00001"
+        ],
+        "流程": [
+          "rec_workflows_00001"
+        ],
+        "渠道": "DEMO渠道",
+        "图片用途": "场景广告图",
+        "消费场景": "模拟室内",
+        "版位": "模拟广告卡片",
+        "视觉风格": "演练用几何背景",
+        "附加要求": "禁止上架",
+        "变体方向": "左侧光线\n右侧光线\n更宽留白",
+        "数量": 3,
+        "最多调用次数": 4,
+        "提交": true,
+        "取消": false,
+        "示例数据": true,
+        "系统状态": "已完成",
+        "运行ID": "run_0cfa3b784c2933752253",
+        "错误摘要": "",
+        "运行档案": [
+          {
+            "file_token": "file_4bb48aca9ce71dc318b16cb1d908675ef9cda2ec16c57831311707acbb5328bd",
+            "name": "run_0cfa3b784c2933752253_internal_666e84ca5664.zip",
+            "size": 11436
+          },
+          {
+            "file_token": "file_aed9387f4e618238d1d34bde02d46703406a1836f3d0bc04aebd2972611d2709",
+            "name": "run_0cfa3b784c2933752253_internal_35f3b73ca696.zip",
+            "size": 11519
+          },
+          {
+            "file_token": "file_16ce6ee48d1b00ac383c521505fb0309275445e0e1d42aa61133d226a8fc733f",
+            "name": "run_0cfa3b784c2933752253_internal_0d56a2c6b6b7.zip",
+            "size": 63180
+          },
+          {
+            "file_token": "file_af629af07c6ee6972e8578a74326e8ca2b1296c80acff62efd895968a88656b1",
+            "name": "run_0cfa3b784c2933752253_internal_d11917e4c2a1.zip",
+            "size": 114776
+          },
+          {
+            "file_token": "file_c06f5e4e69694cda4a3347411822eedc71560e123f3da8b0fed0fc705f095a6a",
+            "name": "run_0cfa3b784c2933752253_internal_251d97202c72.zip",
+            "size": 166239
+          },
+          {
+            "file_token": "file_0ffdc6cdf5cc1fa53c2195154c89bd542cc32c5417f8682b7d3976b5727534ca",
+            "name": "run_0cfa3b784c2933752253_internal_d36010b1e345.zip",
+            "size": 166393
+          },
+          {
+            "file_token": "file_3c62978eb17fa0eb3a02b6a3bf4bd699d8037d6d98befd987ac0437e9c3c9fca",
+            "name": "run_0cfa3b784c2933752253_internal_1580886f0361.zip",
+            "size": 166764
+          }
+        ],
+        "最新档案SHA256": "3c62978eb17fa0eb3a02b6a3bf4bd699d8037d6d98befd987ac0437e9c3c9fca",
+        "已批准交付包": [
+          {
+            "file_token": "file_a7b41093c66ba55cee66417c58eb035eae64195abbfca1fb3908d1d12ff4cd76",
+            "name": "run_0cfa3b784c2933752253_1ad02916574a.zip",
+            "size": 92538
+          }
+        ]
+      }
+    }
+  ],
+  "reviews": [
+    {
+      "record_id": "rec_reviews_00001",
+      "fields": {
+        "审核标题": "模拟人工审核 001",
+        "图片资产": [
+          "rec_assets_00002"
+        ],
+        "目标SHA256": "f749c1a9d473135392e83b835ee0b9ee6214e6f9fdc2b073138ea4f4305c0acd",
+        "结论": "通过",
+        "审核人": [
+          {
+            "id": "ou_demo"
+          }
+        ],
+        "创建人": [
+          {
+            "id": "ou_demo"
+          }
+        ],
+        "创建时间": 1789785600001,
+        "商品准确": true,
+        "品牌及渠道检查": true,
+        "人工确认": true,
+        "原因": "DEMO ONLY"
+      }
+    },
+    {
+      "record_id": "rec_reviews_00002",
+      "fields": {
+        "审核标题": "模拟人工审核 002",
+        "图片资产": [
+          "rec_assets_00003"
+        ],
+        "目标SHA256": "127556390dd5139f63b46573d4a03ddbbb69c14e8905f78648b894c3e61e5dc2",
+        "结论": "通过",
+        "审核人": [
+          {
+            "id": "ou_demo"
+          }
+        ],
+        "创建人": [
+          {
+            "id": "ou_demo"
+          }
+        ],
+        "创建时间": 1789785600002,
+        "商品准确": true,
+        "品牌及渠道检查": true,
+        "人工确认": true,
+        "原因": "DEMO ONLY"
+      }
+    },
+    {
+      "record_id": "rec_reviews_00003",
+      "fields": {
+        "审核标题": "模拟人工审核 003",
+        "图片资产": [
+          "rec_assets_00004"
+        ],
+        "目标SHA256": "5b2c6b9d93b858a9ae88d1c7247c3643aaba72c6f3c18c8da11f9bdfc000538b",
+        "结论": "驳回",
+        "审核人": [
+          {
+            "id": "ou_demo"
+          }
+        ],
+        "创建人": [
+          {
+            "id": "ou_demo"
+          }
+        ],
+        "创建时间": 1789785600003,
+        "商品准确": true,
+        "品牌及渠道检查": true,
+        "人工确认": true,
+        "原因": "DEMO ONLY"
+      }
+    }
+  ],
+  "placements": [
+    {
+      "record_id": "rec_placements_00001",
+      "fields": {
+        "使用记录名": "模拟使用",
+        "使用ID": "DEMO-PLACEMENT-001",
+        "图片资产": [
+          "rec_assets_00002"
+        ],
+        "目标SHA256": "f749c1a9d473135392e83b835ee0b9ee6214e6f9fdc2b073138ea4f4305c0acd",
+        "渠道": "DEMO渠道",
+        "店铺或账户": "DEMO",
+        "版位": "模拟广告卡片",
+        "人工确认已上线": true,
+        "上线时间": "2026-09-01T00:00:00+08:00",
+        "广告或页面ID": "DEMO-NOT-PUBLISHED"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "record_id": "rec_metrics_00001",
+      "fields": {
+        "逻辑键": "0ab4ae009addb71e79509064ec064fecebe9bb3ed5f1cfeca1d24a3e422cf72e",
+        "版本": 1,
+        "使用记录": [
+          "rec_placements_00001"
+        ],
+        "日期": "2026-09-02",
+        "时区": "Asia/Shanghai",
+        "渠道": "DEMO渠道",
+        "曝光": 1000,
+        "点击": 30,
+        "订单": 2,
+        "点击率": 0.03,
+        "每点击订单率": 0.06666666666666667,
+        "指标口径": "演练_订单数除点击数",
+        "数据性质": "demo",
+        "来源文件SHA256": "84391a13bcc80ba4b92058c9fe8f045bc3f67caf7eb28cc47e4ca983710a244a",
+        "样本提醒": "仅作描述；不能证明图片造成提升",
+        "指标ID": "metric_0ab4ae009addb71e7950_v1",
+        "指标记录名": "DEMO-PLACEMENT-001 2026-09-02 v1",
+        "来源文件": [
+          {
+            "file_token": "file_84391a13bcc80ba4b92058c9fe8f045bc3f67caf7eb28cc47e4ca983710a244a",
+            "name": "84391a13bcc80ba4b92058c9fe8f045bc3f67caf7eb28cc47e4ca983710a244a.csv",
+            "size": 190
+          }
+        ]
+      }
+    }
+  ]
+}

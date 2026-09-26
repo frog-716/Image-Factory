@@ -1,0 +1,14 @@
+{
+  "_note": "结构说明，不可直接作为生产回执；以真实 dispatch 和实际工具文件生成。",
+  "run_id": "真实run_id",
+  "slot": "001",
+  "attempt_id": "真实attempt_id",
+  "producer": "codex_native",
+  "actual_model": "not_reported",
+  "provider_call_id": "not_reported",
+  "generated_at": "2026-09-19T10:00:00+00:00",
+  "prompt_sha256": "从真实dispatch读取",
+  "input_sha256": [],
+  "image_path": "incoming/真实文件.png",
+  "tool_evidence_path": "incoming/真实摘要.txt"
+}

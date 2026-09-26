@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "category": "kids_shoes",
+  "run_id": "V1-DEMO-KIDS-REPLACE",
+  "mode": "demo",
+  "workflow_version": "kids-background-v1",
+  "max_image_calls": 6,
+  "steps": [
+    {
+      "id": "product-source",
+      "kind": "image_generate",
+      "depends_on": [],
+      "output_role": "product_rgba",
+      "independent_image_count": 1,
+      "visual_prompt": "独立生成一张无品牌虚构童鞋商品原图：一双完整的白色和浅蓝色儿童运动鞋，三分之四侧前视角，真实商业产品摄影质感。鞋带、鞋底和鞋口清晰，主体完整不截断。柔和左上方主光，主体之间保留空隙，四周留边。透明背景 PNG，不画白底，不画棋盘格。不添加人物、文字、Logo、尺码、价格、认证、功能图标或营销宣称。只输出这一张商品图。"
+    },
+    {
+      "id": "white-preview",
+      "kind": "compose",
+      "depends_on": ["product-source"],
+      "operation": "white_preview"
+    },
+    {
+      "id": "background-outdoor",
+      "kind": "image_generate",
+      "depends_on": ["product-source", "white-preview"],
+      "output_role": "background",
+      "scene": "outdoor",
+      "independent_image_count": 1,
+      "visual_prompt": "独立生成一张正方形童鞋广告背景，只画背景。空旷的现代儿童活动区，浅蓝远景和少量柔和绿植；前景为平整浅灰运动地面。机位低，柔和左上方主光，偏右后方轻柔投影。中心偏下约六成宽度留作商品摆放区，该区域无障碍物。明亮干净、低饱和、真实商业摄影。禁止鞋子、人物、文字、Logo、尺寸、认证、价格、促销符号和拼图。不得在地面预画鞋形阴影。"
+    },
+    {
+      "id": "background-indoor",
+      "kind": "image_generate",
+      "depends_on": ["background-outdoor"],
+      "output_role": "background",
+      "scene": "indoor",
+      "independent_image_count": 1,
+      "visual_prompt": "独立生成一张正方形童鞋广告背景，只画背景。奶油白儿童房，浅木色地面；后方仅少量无品牌积木，背景虚化。机位低，柔和左上方主光，偏右后方轻柔投影。中心偏下约六成宽度留作商品摆放区，该区域无障碍物。明亮干净、低饱和、真实商业摄影。禁止鞋子、人物、文字、Logo、尺寸、认证、价格、促销符号和拼图。不得在地面预画鞋形阴影。"
+    },
+    {
+      "id": "background-studio",
+      "kind": "image_generate",
+      "depends_on": ["background-indoor"],
+      "output_role": "background",
+      "scene": "studio",
+      "independent_image_count": 1,
+      "visual_prompt": "独立生成一张正方形童鞋广告背景，只画背景。奶油白无缝摄影棚，淡蓝渐变远景；平整浅色承托面，无装饰物。机位低，柔和左上方主光，偏右后方轻柔投影。中心偏下约六成宽度留作商品摆放区，该区域无障碍物。明亮干净、低饱和、真实商业摄影。禁止鞋子、人物、文字、Logo、尺寸、认证、价格、促销符号和拼图。不得在地面预画鞋形阴影。"
+    },
+    {
+      "id": "candidate-composition",
+      "kind": "compose",
+      "depends_on": ["product-source", "background-outdoor", "background-indoor", "background-studio"],
+      "operation": "compose_three_candidates_same_source",
+      "expected_outputs": 3
+    },
+    {
+      "id": "human-review",
+      "kind": "human_review",
+      "depends_on": ["candidate-composition"],
+      "policy": "demo-v2"
+    },
+    {
+      "id": "approved-export",
+      "kind": "export",
+      "depends_on": ["human-review"],
+      "only_approved": true
+    },
+    {
+      "id": "demo-feedback",
+      "kind": "metrics",
+      "depends_on": ["approved-export"],
+      "data_nature": "simulated"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "contract_version": 1,
+  "job_id": "EXAMPLE-ONLY",
+  "run_id": "V1-DEMO-KIDS-EXAMPLE",
+  "step_id": "background-outdoor",
+  "attempt_id": "EXAMPLE-ATTEMPT-01",
+  "request_hash": "TO_BE_COMPUTED",
+  "mode": "demo",
+  "category": "kids_shoes",
+  "workflow_version": "kids-background-v1",
+  "node_type": "image_generate",
+  "input_assets": [],
+  "visual_prompt": "独立生成一张正方形童鞋广告背景，只画背景。空旷的现代儿童活动区，浅蓝远景和少量柔和绿植；前景为平整浅灰运动地面。机位低，柔和左上方主光，偏右后方轻柔投影。中心偏下约六成宽度留作商品摆放区，该区域无障碍物。明亮干净、低饱和、真实商业摄影。禁止鞋子、人物、文字、Logo、尺寸、认证、价格、促销符号和拼图。不得在地面预画鞋形阴影。",
+  "allowed_output_role": "background",
+  "max_outputs": 1,
+  "auth_ref": "MUST_REFERENCE_REAL_GRANT",
+  "workspace_root": "SET_BY_RUNTIME",
+  "model_requested": "user_preferred_native_image",
+  "model_reported": null
+}

@@ -1,0 +1,3 @@
+# Existing project already uses Pillow. Reuse its verified version where compatible.
+# Required only for optional alpha/white/composite tests, not the core scheduler.
+Pillow>=10,<13

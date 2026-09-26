@@ -1,0 +1,30 @@
+{
+  "package": "Image-Factory-Build-Kit-v3",
+  "scope": "Package reference and documents only",
+  "reference_tests": {
+    "passed": 79,
+    "failed": 0,
+    "skipped": 0,
+    "evidence": "reference-tests.txt"
+  },
+  "reference_demo": {
+    "passed": true,
+    "evidence": "offline-demo-summary.json",
+    "mock_worker": true,
+    "mock_approval": true
+  },
+  "real_image_calls": 0,
+  "real_feishu_writes": 0,
+  "user_project_tests_rerun": false,
+  "syntax_json_toml_workflow": "PASS",
+  "local_markdown_links": "PASS",
+  "trailing_whitespace": "PASS",
+  "unverified": [
+    "Current user project code integration",
+    "Native image output in user account",
+    "Native headless image worker",
+    "Actual Feishu page deployment",
+    "Live reviewer identity boundary"
+  ],
+  "assurance": "Reference tests do not substitute for live integration acceptance."
+}

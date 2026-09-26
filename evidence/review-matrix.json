@@ -1,0 +1,122 @@
+[
+  {
+    "id": "R01",
+    "priority": "P0",
+    "attack": "重复发起原生生成或超时后盲重试，重复耗额度",
+    "fix": "先预留 attempt；写飞书检查点并回读后才交 dispatch。STARTED 保持不确定，人工确认才可 retry，次数不清零。",
+    "files": "engine.py",
+    "verification": "test_duplicate_dispatch_blocks / test_retry_keeps_budget / test_checkpoint_failure_does_not_reset_slot"
+  },
+  {
+    "id": "R02",
+    "priority": "P0",
+    "attack": "本机丢账本后从头跑已有任务",
+    "fix": "远端已有运行ID即拒绝 prepare；恢复只能使用对应 Base 最新档案 SHA256，已派发状态不回退。",
+    "files": "engine.py / cli.py",
+    "verification": "test_new_machine_must_restore_existing_run / test_restore_preserves_uncertain_slot"
+  },
+  {
+    "id": "R03",
+    "priority": "P0",
+    "attack": "上传响应成功却没有真实可见的检查点",
+    "fix": "上传后读回附件元数据及最新指针；不可见即停止派发。未知写操作只读对账。",
+    "files": "engine.py / state.py",
+    "verification": "test_upload_success_without_visible_attachment_blocks_dispatch / test_unknown_write_never_blind_retries"
+  },
+  {
+    "id": "R04",
+    "priority": "P0",
+    "attack": "旧审核套到被替换的图片，或删除撤回恢复旧批准",
+    "fix": "审核绑定文件SHA256；导出重新下载核对；保留已见审核摘要，事件编辑/删除即阻塞；导出前再读结论。",
+    "files": "engine.py",
+    "verification": "test_remote_attachment_mutation_blocks_export / test_review_deletion_detected / test_revocation_removes_previously_approved"
+  },
+  {
+    "id": "R05",
+    "priority": "P0",
+    "attack": "生成图/示例图混成商品事实或正式成图",
+    "fix": "商品归属、授权、单文件版本、示例隔离、实际 Producer 与回执校验；同图不能占两个槽位。",
+    "files": "model.py / engine.py",
+    "verification": "test_demo_cannot_enter_live / test_wrong_sku_ownership_blocks / test_same_image_cannot_fill_two_slots"
+  },
+  {
+    "id": "R06",
+    "priority": "P1",
+    "attack": "飞书数据在执行中被改，结果无法追溯",
+    "fix": "任务、商品、流程步骤、素材元数据冻结；本地输入与请求哈希每次核查。改动必须新建版本。",
+    "files": "model.py / engine.py",
+    "verification": "test_input_edit_after_prepare_blocks / test_frozen_request_tamper_blocks / test_local_input_tamper_blocks"
+  },
+  {
+    "id": "R07",
+    "priority": "P1",
+    "attack": "参考文本诱导执行代码或读取凭证",
+    "fix": "纯变量替换，无 eval；subprocess argv + shell=False；路径与软链接校验；Agent 外部内容为数据规则。语义提示注入仍有残余风险。",
+    "files": "util.py / model.py / lark.py / AGENTS.md",
+    "verification": "test_business_shell_is_data_only / test_prompt_unknown_variable_blocks / test_no_shell_interpolation"
+  },
+  {
+    "id": "R08",
+    "priority": "P1",
+    "attack": "远端创建成功但响应丢失，重跑产生重复记录",
+    "fix": "journal-before-write；按稳定业务ID读对账；缺少 table_id 的创建响应保留 unknown。",
+    "files": "state.py / sync.py",
+    "verification": "test_reconciles_remote_success_after_timeout / test_bad_table_response_remains_unknown"
+  },
+  {
+    "id": "R09",
+    "priority": "P1",
+    "attack": "CLI 版本漂移、分页漏读、嵌套错误被当成功",
+    "fix": "启动帮助/版本检查、完整分页、游标异常停止、兼容信封并检查内嵌错误；真实附件探针。",
+    "files": "lark.py / cli.py / sync.py",
+    "verification": "test_pagination_reads_all_pages / test_repeated_cursor_stops / test_nested_error_not_ignored / test_attachment_probe_roundtrip"
+  },
+  {
+    "id": "R10",
+    "priority": "P1",
+    "attack": "部分失败却声称完成全部数量",
+    "fix": "候选数和实际交付数分别记录；只批准图入包；部分交付须显式授权，拒绝空包。",
+    "files": "engine.py",
+    "verification": "test_approve_reject_package_counts / test_missing_review_needs_explicit_partial / test_no_approved_images_no_zip"
+  },
+  {
+    "id": "R11",
+    "priority": "P1",
+    "attack": "账本跨 Base 混用，恢复包写出目标目录",
+    "fix": "账本绑定 Base；恢复验证归属、文件数/大小、重复路径、穿越、软链接及校验清单。",
+    "files": "state.py / engine.py / util.py",
+    "verification": "test_base_binding_cannot_switch / test_backup_traversal_rejected / test_backup_checksum_tamper_rejected"
+  },
+  {
+    "id": "R12",
+    "priority": "P1",
+    "attack": "假反馈、重复导入、数据修订覆盖旧值",
+    "fix": "来源性质区分；上架ID与图SHA和渠道核对；导入前整批校验；显式更正追加版本，最新汇总。源证据真实性仍由人核对。",
+    "files": "metrics.py / sync.py",
+    "verification": "test_reimport_does_not_duplicate_metrics / test_corrected_revision_preserves_previous / test_batch_validation_before_any_write"
+  },
+  {
+    "id": "R13",
+    "priority": "P1",
+    "attack": "零分母产生虚假0或混用CVR口径",
+    "fix": "零分母返回None；保留原始整数计数；单独命名每点击订单率；无因果结论与爆款标签。",
+    "files": "metrics.py",
+    "verification": "test_zero_denominator_is_unknown / test_raw_counts_and_formula_validation"
+  },
+  {
+    "id": "R14",
+    "priority": "P1",
+    "attack": "图片解码过载、目录逃逸或备份无限增长",
+    "fix": "限制文件格式/像素/字节、拒绝动画/软链接；检查点总大小受配置限制，达到限额停止派发。",
+    "files": "media.py / util.py / engine.py",
+    "verification": "test_corrupt_image_rejected / test_small_and_oversized_image_rejected / test_archive_capacity_blocks"
+  },
+  {
+    "id": "R15",
+    "priority": "P2",
+    "attack": "示例目录相对路径导致演练最后一步失败",
+    "fix": "演练入口统一转绝对目录；HTML 使用相对图片链接，样例 ZIP 路径可随目录移动。",
+    "files": "demo.py",
+    "verification": "完整离线演练与解压后冒烟测试"
+  }
+]

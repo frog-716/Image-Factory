@@ -1,0 +1,24 @@
+{
+  "scope": "OFFLINE REFERENCE ONLY",
+  "real_image_calls": 0,
+  "real_feishu_writes": 0,
+  "human_review_origin": "mock_fixture_not_human",
+  "restart_state": "waiting_worker",
+  "approved_count": 2,
+  "rejected_count": 1,
+  "zip_image_count": 2,
+  "zip_sha256": "fd6471f61ce2c4af2a6624e21be6a23350902a12588f259df2844f4e23075a22",
+  "metric_second_import": "existing",
+  "production_metric_count": 0,
+  "runtime": {
+    "run_id": "OFFLINE-KIDS-001",
+    "mode": "demo",
+    "next": {
+      "state": "completed",
+      "step": null
+    },
+    "image_calls_reserved": 1,
+    "image_calls_max": 4,
+    "unknown_jobs": []
+  }
+}

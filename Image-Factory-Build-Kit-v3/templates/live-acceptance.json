@@ -1,0 +1,118 @@
+{
+  "scope": "TARGET_PROJECT_LIVE_NOT_RUN_BY_PACKAGE_AUTHOR",
+  "checks": {
+    "baseline_backup": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "old_project_tests": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "development_roles_verified": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "native_source_actual_file": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "transparent_source": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "white_derivative": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "three_independent_backgrounds": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "three_composed_candidates": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "image_budget_enforced": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "simple_feishu_task_submission": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "human_demo_review": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "approved_zip_set": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "zip_roundtrip": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "demo_usage": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "demo_metrics_source": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "metric_idempotency": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "production_exclusion": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "feishu_state_projection": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "restart_no_repeat_generation": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "development_thread_closed_runtime_continues": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "headless_native_worker": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    },
+    "user_handover": {
+      "status": "NOT_RUN",
+      "evidence": null,
+      "performed_by": null
+    }
+  },
+  "real_image_calls": 0,
+  "real_feishu_writes": 0,
+  "unknown_remote_writes": []
+}

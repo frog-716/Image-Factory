@@ -1,0 +1,2 @@
+placement_id,date,timezone,channel,impressions,clicks,orders,metric_definition,source_kind
+DEMO-PLACEMENT-001,2026-09-02,Asia/Shanghai,DEMO渠道,1000,30,2,演练_订单数除点击数,demo

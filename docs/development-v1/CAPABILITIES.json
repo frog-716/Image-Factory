@@ -1,0 +1,59 @@
+{
+  "checked_at": "2026-09-21T17:07:28+08:00",
+  "environment": "Codex desktop local task; macOS; project is not a Git worktree",
+  "features": {
+    "sol_high": {
+      "status": "live_verified",
+      "evidence": "本轮实际启动 gpt-5.6-sol / high 主控，并由其分派两个 Luna xhigh 工程子任务。"
+    },
+    "luna_xhigh": {
+      "status": "available",
+      "evidence": "两个 gpt-5.6-luna / xhigh 子代理均被本机会话接受并运行；不等同于图片能力。"
+    },
+    "subagents": {
+      "status": "live_verified",
+      "evidence": "本轮实际启动两个目录互斥的本地工程子任务。"
+    },
+    "goal_mode": {
+      "status": "available",
+      "evidence": "当前任务由用户以 /goal 启动；codex features list 显示 goals=stable。"
+    },
+    "native_image_visible": {
+      "status": "available",
+      "evidence": "当前根会话暴露 Codex 原生 image generation tool；codex features list 显示 image_generation=stable。"
+    },
+    "native_image_actual_file": {
+      "status": "live_verified",
+      "evidence": "本轮五次 Codex 原生图片调用均返回实际 PNG；实际模型名与调用 ID 未由工具报告，记为 not_reported。"
+    },
+    "native_transparent_output": {
+      "status": "live_verified_with_recorded_normalization",
+      "evidence": "原生输出为 RGBA 且含 alpha=0，但最高 alpha 固定为 254；第二次输出保留原文件/SHA，并仅做 254→255 的确定性 alpha 单值映射后通过严格合同。"
+    },
+    "headless_native_image": {
+      "status": "unknown",
+      "evidence": "codex exec 与 app-server 本机入口存在，但 help/官方文档不证明这些入口可用原生 image tool。"
+    },
+    "structured_worker_receipts": {
+      "status": "live_verified",
+      "evidence": "V1-DEMO-KIDS-001 的 Job、Attempt、请求哈希、失败证据、成功回执和五次预算预留均已写入 Runtime。"
+    },
+    "existing_typed_feishu_gateway": {
+      "status": "live_verified",
+      "evidence": "验收账本记录 typed CRUD/附件往返；本轮 doctor 与 8 表 schema-check 只读通过。"
+    },
+    "feishu_page_configuration": {
+      "status": "base_ui_live_verified_appmode_unverified",
+      "evidence": "现役视图和 Base 记录链复用成功；V1 任务、组件链接、8 个素材及三候选可访问。未实测 AppMode，不据 CRUD 推断。"
+    }
+  },
+  "official_docs": [
+    "https://learn.chatgpt.com/docs/agent-configuration/subagents",
+    "https://learn.chatgpt.com/docs/non-interactive-mode"
+  ],
+  "prohibitions": [
+    "No API key read/configuration",
+    "No paid API fallback",
+    "No browser-cookie automation"
+  ]
+}

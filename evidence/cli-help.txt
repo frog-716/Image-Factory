@@ -1,0 +1,15 @@
+usage: __main__.py [-h] [--config CONFIG] [--state STATE]
+                   {demo,bind,doctor,bootstrap,schema-check,setup-views,seed-workflows,queue,status,probe-feishu,prepare,start-slot,retry-slot,receive,stage-result,push,sync-reviews,export,archive,cancel,record-capability,restore,resolve-effect,import-metrics,metrics-summary} ...
+
+飞书优先的电商图片工作流。默认不生图、不调用付费 API。
+
+positional arguments:
+  {demo,bind,doctor,bootstrap,schema-check,setup-views,seed-workflows,queue,status,probe-feishu,prepare,start-slot,retry-slot,receive,stage-result,push,sync-reviews,export,archive,cancel,record-capability,restore,resolve-effect,import-metrics,metrics-summary}
+    demo                离线全流程演练，完全不联网
+    bind                保存已明确选择的空白 Base token，不访问远端
+    doctor              检查本机、CLI 命令和 Base 只读权限
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG
+  --state STATE

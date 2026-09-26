@@ -1,0 +1,13 @@
+{
+  "run_id": "run_0cfa3b784c2933752253",
+  "slot": "003",
+  "attempt_id": "try_b2319c503d0f4af4b371c0624f242b98",
+  "producer": "mock",
+  "actual_model": "mock_fixture",
+  "provider_call_id": "DEMO-003",
+  "generated_at": "2026-09-19T10:44:14.789870+00:00",
+  "prompt_sha256": "8d97178f458cb30f6e57debde6c3f804b3e75b9d6a880f35067bd8ddddec5f05",
+  "input_sha256": [],
+  "image_path": "incoming/003.png",
+  "tool_evidence_path": "incoming/003.txt"
+}

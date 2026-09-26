@@ -1,0 +1,1 @@
+MOCK generator; no external image model or account was called.

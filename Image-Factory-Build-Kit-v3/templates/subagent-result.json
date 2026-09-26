@@ -1,0 +1,13 @@
+{
+  "task_id": null,
+  "actual_model_id": null,
+  "actual_effort": null,
+  "status": "not_started",
+  "changed_files": [],
+  "tests": [],
+  "evidence": [],
+  "risks": [],
+  "needs_controller_decision": [],
+  "human_review_written": false,
+  "live_writes_performed": false
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "B2-01",
+  "development_only": true,
+  "assigned_role": "Luna xhigh",
+  "actual_model_id": null,
+  "goal": "Implement scoped persistence/recovery gap after interface mapping",
+  "depends_on": [
+    "B0",
+    "B1"
+  ],
+  "owned_files": [],
+  "read_only_inputs": [],
+  "forbidden": [
+    "live Feishu writes",
+    "image calls",
+    "human approvals",
+    "shared-file edits outside owner list"
+  ],
+  "acceptance_commands": [],
+  "artifact_manifest": null,
+  "status": "not_started"
+}

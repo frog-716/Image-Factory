@@ -1,0 +1,18 @@
+{
+  "mode": "demo",
+  "usage_id": "OFFLINE-USAGE-A",
+  "asset_id": "ASSET-A",
+  "channel": "demo",
+  "account_id": "demo",
+  "placement": "demo-ad",
+  "date_from": "2026-09-01",
+  "date_to": "2026-09-07",
+  "timezone": "Asia/Shanghai",
+  "attribution_window": "demo_7d_click",
+  "definition_version": "demo-v1",
+  "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "impressions": 1000,
+  "clicks": 40,
+  "orders": 2,
+  "data_nature": "simulated"
+}

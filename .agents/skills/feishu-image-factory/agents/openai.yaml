@@ -1,0 +1,6 @@
+interface:
+  display_name: "飞书图片工厂"
+  short_description: "素材、流程、原生生图、人工审图与反馈闭环"
+  default_prompt: "按本工程规则执行飞书图片工厂流程，先检查状态与权限。"
+policy:
+  allow_implicit_invocation: false

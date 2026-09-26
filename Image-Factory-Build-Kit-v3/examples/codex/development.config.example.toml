@@ -1,0 +1,11 @@
+# EXAMPLE ONLY. Verify these IDs/effort levels against the installed model catalog.
+# Merge into project settings only after inspection; never overwrite user global config.
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 2
+default_subagent_model = "gpt-5.6-luna"
+default_subagent_reasoning_effort = "xhigh"
+# These are development team settings. Runtime worker configuration is separate.

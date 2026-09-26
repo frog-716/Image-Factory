@@ -1,0 +1,55 @@
+{
+  "mode": "demo",
+  "category": "kids_shoes",
+  "sku_id": null,
+  "run_id": null,
+  "run_revision": null,
+  "workflow": {
+    "id": null,
+    "version": null,
+    "hash": null
+  },
+  "product_source": {
+    "asset_id": null,
+    "sha256": null,
+    "origin": null
+  },
+  "prompt": {
+    "component_versions": [],
+    "visual_text": null,
+    "sha256": null
+  },
+  "attempt": {
+    "id": null,
+    "request_hash": null,
+    "tool": null,
+    "model_reported": null,
+    "evidence_ref": null,
+    "reserved_at": null,
+    "started_at": null,
+    "finished_at": null,
+    "cost_amount": null,
+    "cost_currency": null,
+    "billing_basis": "not_reported"
+  },
+  "raw_output": {
+    "asset_id": null,
+    "sha256": null
+  },
+  "transforms": [],
+  "candidate": {
+    "id": null,
+    "sha256": null
+  },
+  "review": {
+    "id": null,
+    "revision": null,
+    "policy": null
+  },
+  "delivery": {
+    "id": null,
+    "zip_sha256": null
+  },
+  "usage_ids": [],
+  "metric_source_hashes": []
+}

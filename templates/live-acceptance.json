@@ -1,0 +1,23 @@
+{
+  "checked_at": null,
+  "cli_version": null,
+  "python_version": null,
+  "pillow_version": null,
+  "base_token": null,
+  "identity": null,
+  "local_tests_pass": false,
+  "live_base_read": false,
+  "live_schema_check": false,
+  "live_views_checked_by_human": false,
+  "live_attachment_roundtrip": false,
+  "reviewer_identity_checked": false,
+  "native_tool_probe": false,
+  "real_sku_confirmed": false,
+  "real_generation_received": false,
+  "real_human_approval": false,
+  "real_zip_hash_verified": false,
+  "real_placement_recorded": false,
+  "real_metrics_imported": false,
+  "unknowns": [],
+  "evidence_files": []
+}

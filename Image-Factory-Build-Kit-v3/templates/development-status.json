@@ -1,0 +1,47 @@
+{
+  "goal_id": "BUILD-IMAGE-FACTORY-V1",
+  "version": 1,
+  "stage": {
+    "B0": {
+      "state": "not_started",
+      "evidence": []
+    },
+    "B1": {
+      "state": "not_started",
+      "evidence": []
+    },
+    "B2": {
+      "state": "not_started",
+      "evidence": []
+    },
+    "B3": {
+      "state": "not_started",
+      "evidence": []
+    },
+    "B4": {
+      "state": "not_started",
+      "evidence": []
+    },
+    "B5": {
+      "state": "not_started",
+      "evidence": []
+    },
+    "B6": {
+      "state": "not_started",
+      "evidence": []
+    },
+    "B7": {
+      "state": "not_started",
+      "evidence": []
+    }
+  },
+  "current_blockers": [],
+  "unknown_remote_writes": [],
+  "authorization": {
+    "image_calls_max": null,
+    "image_calls_reserved": 0,
+    "evidence": null
+  },
+  "next_action": null,
+  "last_verified_at": null
+}

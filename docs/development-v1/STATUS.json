@@ -1,0 +1,54 @@
+{
+  "goal_id": "BUILD-IMAGE-FACTORY-V1",
+  "version": 1,
+  "stage": {
+    "B0": {"state": "complete", "evidence": ["BASELINE.json", "REUSE-MAP.md", "CAPABILITIES.json", "var/development-v1/backups/baseline-20260921T1615+0800/SHA256SUMS.txt"]},
+    "B1": {"state": "live_complete", "evidence": ["factory/runtime.py", "factory/runtime_runner.py", "var/live/runtime.sqlite3", "tests/test_runtime.py", "tests/test_runtime_runner.py"]},
+    "B2": {"state": "l1_live_running_l2_blocked", "evidence": ["factory/runner_service.py", "var/live/runner/V1-DEMO-KIDS-001/heartbeat.json", "tests/test_runner_service.py", "启动图片工厂.command", "暂停图片工厂.command", "查看图片工厂状态.command"]},
+    "B3": {"state": "live_complete", "evidence": ["factory/schema.py", "factory/model.py", "factory/sync.py", "factory/demo_live.py", "var/live/schema-migrations/v1-latest.json", "tests/test_sync.py", "tests/test_v1_policy.py"]},
+    "B4": {"state": "live_complete_human_review_pending", "evidence": ["factory/image_pipeline.py", "var/live/runtime-runs/V1-DEMO-KIDS-001", "tests/test_image_pipeline.py"]},
+    "B5": {"state": "live_waiting_human_review", "evidence": ["factory/v1_live.py", "factory/runner_service.py", "var/live/runtime-runs/V1-DEMO-KIDS-001/roundtrip", "tests/test_v1_live.py", "tests/test_runner_service.py"]},
+    "B6": {"state": "live_partial_human_review_pending", "evidence": ["ADVERSARIAL-REVIEW.md", "FINAL-REPORT.md"]},
+    "B7": {"state": "complete", "evidence": ["docs/USER-GUIDE.md", "HANDOFF.md", "启动图片工厂.command"]}
+  },
+  "hard_acceptance": [
+    "Runtime state survives process/thread exit and does not rely on Sol/Luna",
+    "project authorization budget atomically caps all image calls at 6 across runs",
+    "unknown and definitive failed attempts consume budget and are never automatically retried",
+    "V1-DEMO-KIDS uses demo-v2 human review without fake product/brand confirmations",
+    "three independent backgrounds and candidates share one verified RGBA product source",
+    "delivery ZIP equals latest approved bytes and round-trip SHA256 matches",
+    "simulated metrics are idempotent and excluded from mode=production statistics",
+    "status outbox replay cannot trigger new image generation or regress a newer revision",
+    "RUN-001/002/003 and historical records remain unchanged"
+  ],
+  "current_blockers": [
+    "Headless native image capability remains unverified; L2 is BLOCKED and L1 stops at waiting_worker.",
+    "Demo review and final ZIP require real human review after candidates are written."
+  ],
+  "unknown_remote_writes": [],
+  "authorization": {
+    "authorization_id": "V1-DEMO-KIDS-20260921",
+    "image_calls_max": 6,
+    "image_calls_reserved": 5,
+    "image_calls_remaining": 1,
+    "evidence": "user launch message; live Runtime reserved five calls: one failed transparent source, one corrected source, and three independent backgrounds"
+  },
+  "offline_validation": {
+    "unittest_discover": {"exit_code": 0, "tests": 144},
+    "scripts_test": {"exit_code": 0, "tests_at_run": 144, "offline_demo": "pass"},
+    "backup_ledger_migration_smoke": {"exit_code": 0, "legacy_runs_before": 0, "legacy_runs_after": 0, "original_sha256_unchanged": true}
+  },
+  "live_validation": {
+    "schema": "8 tables checked; 16 additive V1 fields present; zero known drift",
+    "namespace": "V1-DEMO-KIDS-001",
+    "assets": 8,
+    "attachment_roundtrip_sha256": "pass",
+    "candidates": ["V1-DEMO-KIDS-001-CAND-OUTDOOR", "V1-DEMO-KIDS-001-CAND-INDOOR", "V1-DEMO-KIDS-001-CAND-STUDIO"],
+    "runtime_state": "waiting_review",
+    "unknown_jobs": [],
+    "legacy_tasks": "DEMO-RUN-001/002/003 read back with original statuses and error summaries"
+  },
+  "next_action": "A human creates three demo-v2 review rows in Feishu. The running L1 engine will then export the approved ZIP and write isolated simulated metrics.",
+  "last_verified_at": "2026-09-21T17:07:28+08:00"
+}

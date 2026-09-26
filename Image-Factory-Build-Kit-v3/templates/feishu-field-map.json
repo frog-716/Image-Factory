@@ -1,0 +1,66 @@
+{
+  "note": "Planning map; inspect actual schema and adapt, do not blindly create fields",
+  "target_base_id": null,
+  "tables": {
+    "product": {
+      "expected_label": "01 商品",
+      "record_id": null,
+      "authority": "human"
+    },
+    "assets": {
+      "expected_label": "02 素材与成图",
+      "record_id": null,
+      "authority": "runtime+human metadata"
+    },
+    "workflows": {
+      "expected_label": "03 流程",
+      "record_id": null,
+      "authority": "human published versions"
+    },
+    "steps": {
+      "expected_label": "04 流程步骤",
+      "record_id": null,
+      "authority": "human published versions"
+    },
+    "tasks": {
+      "expected_label": "05 生产任务",
+      "record_id": null,
+      "authority": "human intent/runtime status"
+    },
+    "reviews": {
+      "expected_label": "06 人工审核",
+      "record_id": null,
+      "authority": "verified human only"
+    },
+    "usage": {
+      "expected_label": "07 上架记录",
+      "record_id": null,
+      "authority": "mode-scoped usage"
+    },
+    "metrics": {
+      "expected_label": "08 效果数据",
+      "record_id": null,
+      "authority": "evidenced imports"
+    }
+  },
+  "conditional_additions": [
+    {
+      "table": "reviews",
+      "name": "Demo视觉检查",
+      "type": "boolean",
+      "requires_schema_diff": true
+    },
+    {
+      "table": "reviews",
+      "name": "仅限演示使用",
+      "type": "boolean",
+      "requires_schema_diff": true
+    }
+  ],
+  "execution_steps_storage": "reuse existing persistent ledger; Feishu run archive attachment projection",
+  "migration": {
+    "dry_run_evidence": null,
+    "backup_evidence": null,
+    "user_scope_authorized": false
+  }
+}

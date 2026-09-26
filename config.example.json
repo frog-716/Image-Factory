@@ -1,0 +1,12 @@
+{
+  "base_token": "",
+  "lark_cli": "",
+  "identity": "user",
+  "tables": {},
+  "max_images_per_task": 12,
+  "max_calls_per_task": 18,
+  "max_image_bytes": 20971520,
+  "max_archive_bytes": 134217728,
+  "cli_timeout_seconds": 120,
+  "reviewer_open_ids": []
+}

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>图片工作台</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#reviews" aria-label="图片工作台首页">图片工作台</a>
+        <nav class="main-nav" aria-label="主导航">
+          <button class="nav-link is-active" type="button" data-view="reviews">待我审核</button>
+          <button class="nav-link" type="button" data-view="tasks">任务与交付</button>
+        </nav>
+        <button class="refresh-button" type="button" id="refresh-button">刷新</button>
+      </header>
+
+      <main class="main-content">
+        <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+        <section class="view is-active" id="reviews-view" data-page="reviews" aria-labelledby="reviews-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">需要你的判断</p>
+              <h1 id="reviews-heading">待我审核</h1>
+              <p class="section-description">查看图片，确认后通过或退回。每次操作都会由系统记录。</p>
+            </div>
+            <span class="count-badge" id="review-count" aria-label="待审核数量">—</span>
+          </div>
+          <div class="state-panel" id="reviews-state" aria-live="polite">
+            <p class="state-title">正在加载待审核图片…</p>
+          </div>
+          <div class="review-grid" id="review-list" aria-live="polite"></div>
+        </section>
+
+        <section class="view" id="tasks-view" data-page="tasks" aria-labelledby="tasks-heading" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">查看进展</p>
+              <h1 id="tasks-heading">任务与交付</h1>
+              <p class="section-description">查看任务进展，并在交付完成后下载文件。</p>
+            </div>
+          </div>
+          <div class="state-panel" id="tasks-state" aria-live="polite">
+            <p class="state-title">正在加载任务…</p>
+          </div>
+          <div class="task-list" id="task-list" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="decision-dialog" id="decision-dialog" aria-labelledby="dialog-title">
+      <form method="dialog" id="decision-form">
+        <p class="eyebrow" id="dialog-eyebrow">请确认</p>
+        <h2 id="dialog-title">确认操作</h2>
+        <p class="dialog-copy" id="dialog-copy"></p>
+        <label class="reason-field" id="reason-field" hidden>
+          <span>退回原因（可选）</span>
+          <textarea id="reason-input" rows="3" maxlength="500" placeholder="可以告诉制作人员需要调整什么"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button class="button button-secondary" type="button" id="cancel-decision">取消</button>
+          <button class="button button-primary" type="submit" id="confirm-decision">确认</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

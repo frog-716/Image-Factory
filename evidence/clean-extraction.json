@@ -1,0 +1,19 @@
+{
+  "archive_extraction": "fresh temporary directory",
+  "package_manifest_verified": true,
+  "unit_test_command": "python -m unittest discover -s tests -v",
+  "unit_test_exit_code": 0,
+  "demo_command": "python -m factory demo --out var/fresh-extraction",
+  "demo_exit_code": 0,
+  "generated": 3,
+  "delivered": 2,
+  "metrics_rows": 1,
+  "delivery_zip_verification": {
+    "ok": true,
+    "is_demo": true,
+    "delivered_count": 2,
+    "warning": "Integrity only; verify current approvals and channel requirements before publishing."
+  },
+  "network_or_live_account_used": false,
+  "note": "Before final repack; final repack adds only this validation record and regenerated package checksums."
+}

@@ -1,0 +1,87 @@
+command: bash scripts/check.sh
+exit_code: 0
+PASS: 66 package hashes; local Markdown links valid
+test_fake_rgba_opaque_rejected (test_images.ImageTests.test_fake_rgba_opaque_rejected) ... ok
+test_fully_transparent_rejected (test_images.ImageTests.test_fully_transparent_rejected) ... ok
+test_nonsquare_not_silently_cropped (test_images.ImageTests.test_nonsquare_not_silently_cropped) ... ok
+test_transparent_source_passes (test_images.ImageTests.test_transparent_source_passes) ... ok
+test_white_background_rejected_as_source (test_images.ImageTests.test_white_background_rejected_as_source) ... ok
+test_white_preview_separate_file (test_images.ImageTests.test_white_preview_separate_file) ... ok
+test_white_source_not_erased (test_images.ImageTests.test_white_source_not_erased) ... ok
+test_demo_does_not_overwrite_evidence (test_reference.DemoTests.test_demo_does_not_overwrite_evidence) ... ok
+test_full_offline_run (test_reference.DemoTests.test_full_offline_run) ... ok
+test_fractional_count_rejected (test_reference.MetricsTests.test_fractional_count_rejected) ... ok
+test_missing_count_unknown (test_reference.MetricsTests.test_missing_count_unknown) ... ok
+test_mode_mixing_rejected (test_reference.MetricsTests.test_mode_mixing_rejected) ... ok
+test_nonfinite_rejected (test_reference.MetricsTests.test_nonfinite_rejected) ... ok
+test_numeric_normalization (test_reference.MetricsTests.test_numeric_normalization) ... ok
+test_prod_query_excludes_demo (test_reference.MetricsTests.test_prod_query_excludes_demo) ... ok
+test_reversed_dates (test_reference.MetricsTests.test_reversed_dates) ... ok
+test_same_import_idempotent (test_reference.MetricsTests.test_same_import_idempotent) ... ok
+test_same_source_different_value_conflicts (test_reference.MetricsTests.test_same_source_different_value_conflicts) ... ok
+test_simulated_in_production_rejected (test_reference.MetricsTests.test_simulated_in_production_rejected) ... ok
+test_usage_dimensions_must_match (test_reference.MetricsTests.test_usage_dimensions_must_match) ... ok
+test_zero_denominator_unknown (test_reference.MetricsTests.test_zero_denominator_unknown) ... ok
+test_bool_budget_rejected (test_reference.PlanTests.test_bool_budget_rejected) ... ok
+test_canonical_is_order_invariant (test_reference.PlanTests.test_canonical_is_order_invariant) ... ok
+test_cycle_rejected (test_reference.PlanTests.test_cycle_rejected) ... ok
+test_duplicate_step_rejected (test_reference.PlanTests.test_duplicate_step_rejected) ... ok
+test_mutation_conflicts (test_reference.PlanTests.test_mutation_conflicts) ... ok
+test_only_shoes (test_reference.PlanTests.test_only_shoes) ... ok
+test_path_traversal_rejected (test_reference.PlanTests.test_path_traversal_rejected) ... ok
+test_recreate_is_idempotent (test_reference.PlanTests.test_recreate_is_idempotent) ... ok
+test_unscoped_mode_rejected (test_reference.PlanTests.test_unscoped_mode_rejected) ... ok
+test_untrusted_command_node_rejected (test_reference.PlanTests.test_untrusted_command_node_rejected) ... ok
+test_auto_caption_not_permission_bypass (test_reference.PromptTests.test_auto_caption_not_permission_bypass) ... ok
+test_disallowed_image_input_rejected (test_reference.PromptTests.test_disallowed_image_input_rejected) ... ok
+test_invalid_scene (test_reference.PromptTests.test_invalid_scene) ... ok
+test_no_reference_files_default (test_reference.PromptTests.test_no_reference_files_default) ... ok
+test_three_scenes_differ (test_reference.PromptTests.test_three_scenes_differ) ... ok
+test_cross_run_review_rejected (test_reference.ReviewTests.test_cross_run_review_rejected) ... ok
+test_demo_does_not_require_false_product_claims (test_reference.ReviewTests.test_demo_does_not_require_false_product_claims) ... ok
+test_duplicate_image_rejected (test_reference.ReviewTests.test_duplicate_image_rejected) ... ok
+test_empty_approval_no_fake_zip (test_reference.ReviewTests.test_empty_approval_no_fake_zip) ... ok
+test_extra_zip_entry_rejected (test_reference.ReviewTests.test_extra_zip_entry_rejected) ... ok
+test_file_changed_after_review (test_reference.ReviewTests.test_file_changed_after_review) ... ok
+test_hash_mismatch (test_reference.ReviewTests.test_hash_mismatch) ... ok
+test_missing_actor (test_reference.ReviewTests.test_missing_actor) ... ok
+test_missing_check (test_reference.ReviewTests.test_missing_check) ... ok
+test_pending_does_not_export (test_reference.ReviewTests.test_pending_does_not_export) ... ok
+test_production_checks_remain_required (test_reference.ReviewTests.test_production_checks_remain_required) ... ok
+test_revision_conflict (test_reference.ReviewTests.test_revision_conflict) ... ok
+test_revocation_overrides_approval (test_reference.ReviewTests.test_revocation_overrides_approval) ... ok
+test_unreviewed_candidate_blocks (test_reference.ReviewTests.test_unreviewed_candidate_blocks) ... ok
+test_zip_exact_approved_set (test_reference.ReviewTests.test_zip_exact_approved_set) ... ok
+test_zip_manifest_allowlist (test_reference.ReviewTests.test_zip_manifest_allowlist) ... ok
+test_zip_reproducible (test_reference.ReviewTests.test_zip_reproducible) ... ok
+test_authorization_wrong_plan_rejected (test_reference.RuntimeTests.test_authorization_wrong_plan_rejected) ... ok
+test_budget_authorization_mismatch (test_reference.RuntimeTests.test_budget_authorization_mismatch) ... ok
+test_budget_exhausted (test_reference.RuntimeTests.test_budget_exhausted) ... ok
+test_duplicate_dispatch_blocked (test_reference.RuntimeTests.test_duplicate_dispatch_blocked) ... ok
+test_empty_get_not_terminal_proof (test_reference.RuntimeTests.test_empty_get_not_terminal_proof) ... ok
+test_file_content_tampered (test_reference.RuntimeTests.test_file_content_tampered) ... ok
+test_future_step_blocked (test_reference.RuntimeTests.test_future_step_blocked) ... ok
+test_late_success_accepted_without_resend (test_reference.RuntimeTests.test_late_success_accepted_without_resend) ... ok
+test_local_cannot_fake_worker_completion (test_reference.RuntimeTests.test_local_cannot_fake_worker_completion) ... ok
+test_mock_cannot_claim_native (test_reference.RuntimeTests.test_mock_cannot_claim_native) ... ok
+test_no_authorization_no_dispatch (test_reference.RuntimeTests.test_no_authorization_no_dispatch) ... ok
+test_no_native_adapter_fails_explicitly (test_reference.RuntimeTests.test_no_native_adapter_fails_explicitly) ... ok
+test_production_rejects_mock (test_reference.RuntimeTests.test_production_rejects_mock) ... ok
+test_receipt_idempotent (test_reference.RuntimeTests.test_receipt_idempotent) ... ok
+test_restart_waits_same_job (test_reference.RuntimeTests.test_restart_waits_same_job) ... ok
+test_retry_consumes_budget_not_refunded (test_reference.RuntimeTests.test_retry_consumes_budget_not_refunded) ... ok
+test_second_connection_cannot_double_claim (test_reference.RuntimeTests.test_second_connection_cannot_double_claim) ... ok
+test_unknown_does_not_retry (test_reference.RuntimeTests.test_unknown_does_not_retry) ... ok
+test_worker_does_not_finish_whole_run (test_reference.RuntimeTests.test_worker_does_not_finish_whole_run) ... ok
+test_wrong_request_hash (test_reference.RuntimeTests.test_wrong_request_hash) ... ok
+test_confirmed_write_skipped (test_reference.WriteTests.test_confirmed_write_skipped) ... ok
+test_journal_before_write (test_reference.WriteTests.test_journal_before_write) ... ok
+test_payload_conflict (test_reference.WriteTests.test_payload_conflict) ... ok
+test_pending_not_resubmitted (test_reference.WriteTests.test_pending_not_resubmitted) ... ok
+test_readback_must_match_original (test_reference.WriteTests.test_readback_must_match_original) ... ok
+test_unknown_write_not_resubmitted (test_reference.WriteTests.test_unknown_write_not_resubmitted) ... ok
+
+----------------------------------------------------------------------
+Ran 79 tests in 0.074s
+
+OK

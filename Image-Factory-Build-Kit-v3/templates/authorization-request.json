@@ -1,0 +1,24 @@
+{
+  "kind": "authorization_request_NOT_A_GRANT",
+  "approved": false,
+  "actor_id": null,
+  "source_message_ref": null,
+  "scope": "one V1 fictional kids-shoes live demo",
+  "mode": "demo",
+  "category": "kids_shoes",
+  "run_plan_hash": null,
+  "project_image_calls_limit": 6,
+  "includes": [
+    "capability probe",
+    "product source",
+    "backgrounds",
+    "image corrections"
+  ],
+  "max_output_images_per_call": 1,
+  "paid_api_allowed": false,
+  "real_publish_allowed": false,
+  "expand_permissions_allowed": false,
+  "human_approval_bypass_allowed": false,
+  "feishu_target_base_confirmed": false,
+  "expires_at": null
+}

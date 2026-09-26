@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "checked_at": "2026-09-19",
+  "environment": {
+    "python": "3.13.5",
+    "pillow": "12.3.0",
+    "platform": "linux"
+  },
+  "test_count": 94,
+  "tests_passed": true,
+  "tests_command": "python -m unittest discover -s tests -v",
+  "tests_exit_code": 0,
+  "compileall_exit_code": 0,
+  "offline_demo": {
+    "mode": "offline_mock",
+    "live_feishu_tested": false,
+    "native_image_generation_tested": false,
+    "run_id": "run_0cfa3b784c2933752253",
+    "requested": 3,
+    "generated": 3,
+    "approved": 2,
+    "rejected": 1,
+    "delivered": 2,
+    "metrics_rows": 1,
+    "delivery_zip": "runtime/deliveries/run_0cfa3b784c2933752253_1ad02916574a.zip",
+    "delivery_sha256": "a7b41093c66ba55cee66417c58eb035eae64195abbfca1fb3908d1d12ff4cd76",
+    "source_digest": "1e4fa1a32160cc718465cc4cf463ced04e85452a5301799d9c479914925d2b51"
+  },
+  "delivery_verification": {
+    "ok": true,
+    "is_demo": true,
+    "delivered_count": 2,
+    "warning": "Integrity only; verify current approvals and channel requirements before publishing."
+  },
+  "live_feishu_tested": false,
+  "native_image_generation_tested": false,
+  "real_topstar_assets_included": false,
+  "real_channel_feedback_tested": false,
+  "known_scope": "single-host interactive Codex; raw API contract fixtures and offline mock integration, not live acceptance"
+}
