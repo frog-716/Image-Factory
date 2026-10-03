@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import CoreFoundation
 import Darwin
 import Foundation
 import SwiftUI
@@ -41,10 +42,17 @@ final class LauncherModel: ObservableObject {
     @Published private(set) var phase: Phase = .stopped
     @Published private(set) var message = "点击下面的按钮打开审核工作台。"
     @Published private(set) var projectRoot: URL?
+    @Published private(set) var intakeMessage = "表单接单尚未启动。"
+    @Published private(set) var intakeHasFailure = false
 
     private var process: Process?
     private var outputPipe: Pipe?
     private var outputBuffer = Data()
+    private var intakeProcess: Process?
+    private var intakeOutputPipe: Pipe?
+    private var intakeOutputBuffer = Data()
+    private var intakeOutputFailure: String?
+    private var intakeRequestedStop = false
     private var entryURL: URL?
     private var requestedStop = false
     private var startupFailure: String?
@@ -58,11 +66,16 @@ final class LauncherModel: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.terminateOwnedProcess()
+                self?.terminateOwnedProcesses()
             }
         }
         if projectRoot == nil {
             message = "没有找到项目文件夹。点“选择项目文件夹”选中 Image-Factory。"
+        } else if !Self.hasActiveRun(projectRoot!) {
+            message = "目前没有待审核任务。工作台仍可打开，新的任务会在建立后显示。"
+        }
+        if let projectRoot {
+            updateIntakeAvailability(for: projectRoot)
         }
     }
 
@@ -101,7 +114,10 @@ final class LauncherModel: ObservableObject {
         }
         projectRoot = url.resolvingSymlinksInPath()
         phase = .stopped
-        message = "项目已找到。点击“启动并打开审核工作台”。"
+        updateIntakeAvailability(for: projectRoot!)
+        message = Self.hasActiveRun(projectRoot!)
+            ? "项目已找到。点击“启动并打开审核工作台”。"
+            : "项目已找到。可以打开工作台，目前暂无任务。"
     }
 
     func openWorkbench() {
@@ -144,7 +160,6 @@ final class LauncherModel: ObservableObject {
             "--config", "config.local.json",
             "--state", "var/live",
             "human-ui",
-            "--run", "V1-DEMO-KIDS-001",
             "--port", String(port)
         ]
         child.currentDirectoryURL = root
@@ -171,6 +186,7 @@ final class LauncherModel: ObservableObject {
         outputPipe = pipe
         do {
             try child.run()
+            startIntakeLoopIfAuthorized(root: root)
         } catch {
             pipe.fileHandleForReading.readabilityHandler = nil
             process = nil
@@ -181,6 +197,7 @@ final class LauncherModel: ObservableObject {
     }
 
     func stopService() {
+        stopIntakeLoop()
         guard let process, process.isRunning else {
             self.process = nil
             entryURL = nil
@@ -229,7 +246,9 @@ final class LauncherModel: ObservableObject {
         if let error = payload["error"] as? String {
             startupFailure = error
             phase = .failed
-            if error.localizedCaseInsensitiveContains("飞书")
+            if error.contains("Unknown run") {
+                message = "这条任务已不存在。旧演示不会重新打开；请等待新任务建立。"
+            } else if error.localizedCaseInsensitiveContains("飞书")
                 || error.localizedCaseInsensitiveContains("lark") {
                 message = "飞书在线验证没有通过。请先在飞书登录，再回到这里重试。"
             } else {
@@ -278,11 +297,13 @@ final class LauncherModel: ObservableObject {
         startupFailure = detail
         phase = .failed
         message = detail
+        stopIntakeLoop()
         if let process, process.isRunning { process.terminate() }
     }
 
     private func childDidTerminate(_ child: Process) {
         guard process === child else { return }
+        stopIntakeLoop()
         outputPipe?.fileHandleForReading.readabilityHandler = nil
         process = nil
         outputPipe = nil
@@ -303,9 +324,166 @@ final class LauncherModel: ObservableObject {
         requestedStop = false
     }
 
-    private func terminateOwnedProcess() {
+    private func terminateOwnedProcesses() {
         outputPipe?.fileHandleForReading.readabilityHandler = nil
         if let process, process.isRunning { process.terminate() }
+        if intakeProcess?.isRunning == true {
+            intakeRequestedStop = true
+            intakeProcess?.terminate()
+        }
+    }
+
+    private func updateIntakeAvailability(for root: URL) {
+        intakeHasFailure = false
+        if Self.hasAuthorizedIntakeConfiguration(root) {
+            intakeMessage = "已配置明确且商品范围匹配的受信授权；启动工作台时会打开表单接单。"
+        } else {
+            intakeMessage = "表单接单未启用：本机缺少完整、商品绑定的 approved grant；审核工作台仍可打开。"
+        }
+    }
+
+    private func startIntakeLoopIfAuthorized(root: URL) {
+        guard intakeProcess?.isRunning != true else { return }
+        guard Self.hasAuthorizedIntakeConfiguration(root) else {
+            updateIntakeAvailability(for: root)
+            return
+        }
+
+        intakeRequestedStop = false
+        intakeOutputBuffer.removeAll(keepingCapacity: true)
+        intakeOutputFailure = nil
+
+        let child = Process()
+        let pipe = Pipe()
+        child.executableURL = root.appendingPathComponent(".venv/bin/python")
+        child.arguments = [
+            "-u", "-m", "factory",
+            "--config", "config.local.json",
+            "--state", "var/live",
+            "intake-loop",
+            "--interval", "5",
+            "--max-cycles", "0"
+        ]
+        child.currentDirectoryURL = root
+        child.standardOutput = pipe
+        child.standardError = pipe
+
+        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            guard !data.isEmpty else {
+                handle.readabilityHandler = nil
+                return
+            }
+            DispatchQueue.main.async {
+                self?.consumeIntakeOutput(data)
+            }
+        }
+        child.terminationHandler = { [weak self] terminated in
+            DispatchQueue.main.async {
+                self?.intakeChildDidTerminate(terminated)
+            }
+        }
+
+        intakeProcess = child
+        intakeOutputPipe = pipe
+        do {
+            try child.run()
+            intakeHasFailure = false
+            intakeMessage = "表单接单循环已启动；它只排队任务，不生成图片。"
+        } catch {
+            pipe.fileHandleForReading.readabilityHandler = nil
+            intakeProcess = nil
+            intakeOutputPipe = nil
+            intakeHasFailure = true
+            intakeMessage = "表单接单循环启动失败：\(error.localizedDescription)。审核工作台仍可使用。"
+        }
+    }
+
+    private func stopIntakeLoop() {
+        guard let intakeProcess, intakeProcess.isRunning else { return }
+        intakeRequestedStop = true
+        intakeMessage = "正在停止表单接单循环……"
+        intakeProcess.terminate()
+    }
+
+    private func consumeIntakeOutput(_ data: Data) {
+        intakeOutputBuffer.append(data)
+        if intakeOutputBuffer.count > 64_000 {
+            intakeOutputBuffer = Data(intakeOutputBuffer.suffix(32_000))
+        }
+        while let newline = intakeOutputBuffer.firstIndex(of: 10) {
+            let lineData = intakeOutputBuffer.prefix(upTo: newline)
+            intakeOutputBuffer.removeSubrange(...newline)
+            guard let line = String(data: lineData, encoding: .utf8),
+                  let payload = try? JSONSerialization.jsonObject(
+                    with: Data(line.utf8)
+                  ) as? [String: Any],
+                  let error = payload["error"] as? String else { continue }
+            intakeOutputFailure = String(error.prefix(200))
+            intakeHasFailure = true
+            intakeMessage = "表单接单循环遇到错误：\(intakeOutputFailure!)。审核工作台仍可使用。"
+        }
+    }
+
+    private func intakeChildDidTerminate(_ child: Process) {
+        guard intakeProcess === child else { return }
+        intakeOutputPipe?.fileHandleForReading.readabilityHandler = nil
+        intakeProcess = nil
+        intakeOutputPipe = nil
+        if intakeRequestedStop {
+            intakeMessage = "表单接单循环已停止。"
+            intakeHasFailure = false
+        } else {
+            let detail = intakeOutputFailure ?? "退出码 \(child.terminationStatus)"
+            intakeMessage = "表单接单循环已退出：\(detail)。审核工作台仍可使用。"
+            intakeHasFailure = true
+        }
+        intakeRequestedStop = false
+    }
+
+    private static func hasAuthorizedIntakeConfiguration(_ root: URL) -> Bool {
+        let configURL = root.appendingPathComponent("config.local.json")
+        guard let data = try? Data(contentsOf: configURL),
+              let config = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let grant = config["intake_grant"] as? [String: Any],
+              let profile = config["intake_profile"] as? [String: Any],
+              let approved = grant["approved"] as? NSNumber,
+              CFGetTypeID(approved) == CFBooleanGetTypeID(), approved.boolValue,
+              nonEmptyString(grant["authorization_id"]) != nil,
+              nonEmptyString(grant["actor_id"]) != nil,
+              let scope = grant["scope"] as? [String: Any],
+              let profileNamespace = nonEmptyString(profile["namespace"]),
+              let profileMode = nonEmptyString(profile["mode"]),
+              profileNamespace == "V1-DEMO-KIDS", profileMode == "demo",
+              nonEmptyString(profile["review_policy_version"]) == "demo-v2",
+              let allowedProductIDs = profile["allowed_product_ids"] as? [String],
+              !allowedProductIDs.isEmpty,
+              allowedProductIDs.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }),
+              let productRecordID = nonEmptyString(scope["product_record_id"]),
+              allowedProductIDs.contains(productRecordID),
+              nonEmptyString(scope["namespace"]) == profileNamespace,
+              nonEmptyString(scope["mode"]) == profileMode,
+              nonEmptyString(scope["category"]) == "kids_shoes",
+              nonEmptyString(profile["workflow_id"]) != nil,
+              nonEmptyString(profile["channel"]) != nil,
+              nonEmptyString(profile["placement"]) != nil,
+              let maxCalls = strictInteger(profile["max_calls"]), (1...6).contains(maxCalls),
+              let grantLimit = strictInteger(grant["project_image_calls_limit"]),
+              grantLimit >= maxCalls else { return false }
+        return true
+    }
+
+    private static func nonEmptyString(_ value: Any?) -> String? {
+        guard let string = value as? String else { return nil }
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func strictInteger(_ value: Any?) -> Int? {
+        guard let number = value as? NSNumber,
+              CFGetTypeID(number) != CFBooleanGetTypeID(),
+              number.doubleValue.rounded(.towardZero) == number.doubleValue else { return nil }
+        return number.intValue
     }
 
     private static func detectProjectRoot() -> URL? {
@@ -322,6 +500,10 @@ final class LauncherModel: ObservableObject {
         return fm.isExecutableFile(atPath: root.appendingPathComponent(".venv/bin/python").path)
             && fm.fileExists(atPath: root.appendingPathComponent("factory/cli.py").path)
             && fm.fileExists(atPath: root.appendingPathComponent("config.local.json").path)
+    }
+
+    private static func hasActiveRun(_ root: URL) -> Bool {
+        FileManager.default.fileExists(atPath: root.appendingPathComponent("var/live/active-v1-run.json").path)
     }
 
     private static func availablePort() -> Int? {
@@ -429,6 +611,11 @@ private struct WorkbenchPage: View {
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
+                        Label(launcher.intakeMessage,
+                              systemImage: launcher.intakeHasFailure ? "exclamationmark.triangle" : "tray.and.arrow.down")
+                            .font(.callout)
+                            .foregroundStyle(launcher.intakeHasFailure ? Color.orange : Color.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
                 }
@@ -469,7 +656,7 @@ private struct WorkbenchPage: View {
 
             Spacer(minLength: 8)
             Divider()
-            Label("这里只打开审核页面，不会启动生产或生成图片。", systemImage: "lock.shield")
+            Label("这里启动本机审图与受信表单接单；接单只排队，不会生成图片。", systemImage: "lock.shield")
                 .font(.callout)
                 .foregroundStyle(.secondary)
             Text("使用时请保持这个 App 运行。退出 App 会停止它启动的本机服务。")
@@ -560,6 +747,8 @@ private struct TutorialPage: View {
 
                 GroupBox("小提示") {
                     VStack(alignment: .leading, spacing: 9) {
+                        Label("没有待审核任务时，也能打开空工作台；不会创建任务或生成图片。", systemImage: "info.circle")
+                        Label("只有本机配置了商品范围匹配的受信授权，App 才会启动表单接单。", systemImage: "checkmark.shield")
                         Label("如果飞书验证失败，先在飞书登录，再回到 App 重试。", systemImage: "person.crop.circle.badge.exclamationmark")
                         Label("退出 App 会停止本机服务；下次双击 App 再打开即可。", systemImage: "power")
                         Label("重新启动后，请从 App 打开新网页；旧网页地址会失效。", systemImage: "arrow.clockwise")

@@ -1,0 +1,90 @@
+{
+  "captured_at": "2026-09-27",
+  "form_id": "vewf4mUu1A",
+  "table_key": "tasks",
+  "data": {
+    "questions": [
+      {
+        "default_value": null,
+        "description": "选择要生成图片的商品。",
+        "id": "fldwOBeqCZ",
+        "multiple": false,
+        "option_display_mode": 0,
+        "options": [
+          {
+            "hue": "Green",
+            "lightness": "Lighter",
+            "name": "DEMO TOPSTAR Chair Visual Sample（非真实商品）"
+          },
+          {
+            "hue": "Lime",
+            "lightness": "Lighter",
+            "name": "DEMO TOPSTAR Kids Individual Demo"
+          },
+          {
+            "hue": "Orange",
+            "lightness": "Lighter",
+            "name": "V1 虚构白蓝童鞋"
+          }
+        ],
+        "required": true,
+        "title": "商品",
+        "type": "select"
+      },
+      {
+        "default_value": null,
+        "id": "fldJeNdAZU",
+        "required": true,
+        "style": {
+          "type": "plain"
+        },
+        "title": "图片用途",
+        "type": "text"
+      },
+      {
+        "default_value": null,
+        "id": "fld9cQlSql",
+        "required": true,
+        "style": {
+          "type": "plain"
+        },
+        "title": "场景",
+        "type": "text"
+      },
+      {
+        "default_value": null,
+        "id": "fld1M39MZ2",
+        "required": true,
+        "style": {
+          "type": "plain"
+        },
+        "title": "风格",
+        "type": "text"
+      },
+      {
+        "default_value": null,
+        "id": "fldUzpaVAY",
+        "required": true,
+        "style": {
+          "percentage": false,
+          "precision": 1,
+          "thousands_separator": false,
+          "type": "plain"
+        },
+        "title": "数量",
+        "type": "number"
+      },
+      {
+        "default_value": null,
+        "id": "fldosxJLqk",
+        "required": false,
+        "style": {
+          "type": "plain"
+        },
+        "title": "额外要求",
+        "type": "text"
+      }
+    ],
+    "total": 6
+  }
+}

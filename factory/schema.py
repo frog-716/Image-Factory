@@ -38,7 +38,9 @@ TABLES = {
         field("组件ID"), field("组件版本"),
     ]},
     "tasks": {"name": "05 生产任务", "fields": [
-        field("任务名"), link("商品","products",False), link("流程","workflows",False),
+        field("任务名"), select("选择商品",[]),
+        select("创建确认",["确认创建演示任务"]),
+        link("商品","products",False), link("流程","workflows",False),
         link("选用素材","assets"), field("渠道"), field("图片用途"), field("消费场景"), field("版位"),
         field("视觉风格"), field("附加要求"), field("变体方向"), field("数量",2), field("最多调用次数",2),
         field("提交",7), field("取消",7), field("示例数据",7), select("系统状态",STATES),
@@ -68,6 +70,8 @@ TABLES = {
 }
 
 TASK_INPUTS = ["任务名","商品","流程","选用素材","渠道","图片用途","消费场景","版位","视觉风格","附加要求","变体方向","数量","最多调用次数","示例数据","返工来源","命名空间","模式","选用提示词组件","审核策略版本","运行版本"]
+# Human form inputs are a separate boundary; they are not frozen task inputs.
+FORM_INPUTS = ["选择商品", "图片用途", "消费场景", "视觉风格", "数量", "附加要求", "创建确认"]
 PRODUCT_INPUTS = ["商品名","SKU","商品品牌","事实版本","已确认事实","禁止改变","事实来源","资料已确认","示例数据","默认商品素材"]
 WORKFLOW_INPUTS = ["流程名","版本","生产方式","已发布","输出宽度","输出高度","商品占画布比例","示例数据"]
 STEP_INPUTS = ["步骤名","流程","顺序","节点类型","提示词模板","参考素材","启用","组件ID","组件版本"]

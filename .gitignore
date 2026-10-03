@@ -10,5 +10,6 @@ __pycache__/
 *.log
 /dist/
 *.zip
+/.scratch/
 /docs/product-v1/BASEAPP-CAPABILITIES.md
 /docs/product-v1/LIVE-IMPLEMENTATION.md

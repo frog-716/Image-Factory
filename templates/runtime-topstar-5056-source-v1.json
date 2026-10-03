@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "category": "kids_shoes",
+  "run_id": "TOPSTAR-SOURCE-5056-REPLACE",
+  "mode": "demo",
+  "workflow_version": "topstar-5056-source-cutout-v1",
+  "max_image_calls": 1,
+  "steps": [
+    {
+      "id": "topstar-5056-source-cutout",
+      "kind": "image_generate",
+      "depends_on": [],
+      "output_role": "product_rgba",
+      "independent_image_count": 1,
+      "visual_prompt": "仅以输入的 TOPSTAR 5056 Beige 鞋子原图为依据，制作同一张斜前视图的单张商品源 PNG：只移除原图背景并输出真实透明 alpha。保持鞋子的轮廓、朝向、比例、米色鞋面、棕米色鞋底、粘扣带、缝线与可见细节不变；不重新设计或美化商品，不翻转、不旋转、不裁掉鞋子，不生成第二个角度。原图没有清楚展示的部位一律不臆造，也不补写功能、材质或尺码。不得增加 Logo、文字、水印、道具、地面、阴影、棋盘格或白底。只输出一张完整鞋子的透明 PNG。"
+    }
+  ]
+}

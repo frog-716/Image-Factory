@@ -1,6 +1,10 @@
 {
   "goal_id": "BUILD-IMAGE-FACTORY-V1",
   "version": 1,
+  "historical_snapshot": true,
+  "snapshot_as_of": "2026-09-21T17:07:28+08:00",
+  "superseded_at": "2026-09-27",
+  "current_state": "V1-DEMO-KIDS-001 and its fictional images retired by explicit user request; no active live run; see docs/product-v1/LIVE-IMPLEMENTATION.md",
   "stage": {
     "B0": {"state": "complete", "evidence": ["BASELINE.json", "REUSE-MAP.md", "CAPABILITIES.json", "var/development-v1/backups/baseline-20260921T1615+0800/SHA256SUMS.txt"]},
     "B1": {"state": "live_complete", "evidence": ["factory/runtime.py", "factory/runtime_runner.py", "var/live/runtime.sqlite3", "tests/test_runtime.py", "tests/test_runtime_runner.py"]},
@@ -49,6 +53,6 @@
     "unknown_jobs": [],
     "legacy_tasks": "DEMO-RUN-001/002/003 read back with original statuses and error summaries"
   },
-  "next_action": "A human creates three demo-v2 review rows in Feishu. The running L1 engine will then export the approved ZIP and write isolated simulated metrics.",
+  "next_action": "Historical only. Do not review or recreate the retired V1 run. See docs/product-v1/LIVE-IMPLEMENTATION.md for current TOPSTAR staging and blockers.",
   "last_verified_at": "2026-09-21T17:07:28+08:00"
 }

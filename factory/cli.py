@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
 from .util import FactoryError, UnknownWrite, canonical, confined, file_hash, now, process_lock, read_json, safe_id, text, write_json
 from .lark import LarkCLI,FeishuGateway
@@ -31,6 +32,13 @@ def parser():
     s.add_argument("--run",required=True);s.add_argument("--authorization-id",default="V1-DEMO-KIDS-20260921")
     s.add_argument("--actor-id",default="user_launch_message")
     s.add_argument("--template",default=str(ROOT/"templates/runtime-workflow-kids-demo-v1.json"))
+    s=sub.add_parser("runtime-init-asset-batch",help="初始化独立虚构童鞋多角度素材批次；本地 6 次上限，不触碰现役 Demo")
+    s.add_argument("--run",required=True);s.add_argument("--authorization-id",required=True)
+    s.add_argument("--actor-id",required=True);s.add_argument("--reference-image",required=True)
+    s.add_argument("--template",default=str(ROOT/"templates/runtime-fictional-kids-assets-v1.json"))
+    s=sub.add_parser("runtime-init-topstar-source",help="冻结 TOPSTAR 5056 透明商品源图任务与共享 6 次授权；不派发图片")
+    s.add_argument("--run",required=True);s.add_argument("--authorization-id",required=True)
+    s.add_argument("--actor-id",required=True);s.add_argument("--reference-image",required=True)
     s=sub.add_parser("runtime-status",help="读取独立 Runtime 状态")
     s.add_argument("--run",required=True)
     s=sub.add_parser("runtime-advance",help="持续推进确定性本地节点，遇图片/审核/live 节点即停")
@@ -57,6 +65,10 @@ def parser():
     s.add_argument("--run");s.add_argument("--port",type=int,default=8765);s.add_argument("--open",action="store_true")
     s=sub.add_parser("runner-stop",help="请求流程引擎在当前周期后停止")
     s.add_argument("--run")
+    sub.add_parser("intake-once",help="受信飞书表单受理一个周期；仅排队，不生图")
+    s=sub.add_parser("intake-loop",help="受信飞书表单持续受理；仅排队，不生图")
+    s.add_argument("--interval",type=float,default=5.0)
+    s.add_argument("--max-cycles",type=int,default=0)
     s=sub.add_parser("bind",help="保存已明确选择的空白 Base token，不访问远端")
     s.add_argument("--base-token",required=True);s.add_argument("--cli");s.add_argument("--reviewer",action="append",default=[])
     sub.add_parser("doctor",help="检查本机、CLI 命令和 Base 只读权限")
@@ -150,21 +162,49 @@ def execute(args):
         if args.reviewer:config["reviewer_open_ids"]=[safe_id(x) for x in args.reviewer]
         write_json(cfg_path,config)
         return {"saved":str(cfg_path),"remote_changed":False}
+    if args.command in ("intake-once","intake-loop"):
+        if not isinstance(config.get("intake_grant"),dict):
+            raise FactoryError("缺少本机受信授权；不会读取或受理飞书表单。")
+        if not isinstance(config.get("intake_profile"),dict):
+            raise FactoryError("缺少本机受信任务配置；不会读取或受理飞书表单。")
+        if args.command=="intake-loop" and (
+            args.interval<=0 or args.max_cycles<0
+        ):
+            raise FactoryError("接单循环的 interval 必须大于 0，max-cycles 不能为负数。")
+        from .form_intake_service import poll_form_once
+        cycles=0
+        while True:
+            if args.command=="intake-loop" and configuration(cfg_path)!=config:
+                raise FactoryError("本机受信配置或授权已变化；接单循环停止，请重新启动。")
+            with process_lock(state_root):
+                state=State(state_root)
+                try:
+                    if config.get("base_token"):state.bind_base(config["base_token"])
+                    engine=Engine(FeishuGateway(config),state,config)
+                    result=poll_form_once(engine,config["intake_grant"])
+                finally:state.close()
+            cycles+=1
+            if args.command=="intake-once":return result
+            if args.max_cycles and cycles>=args.max_cycles:
+                return {**result,"cycles":cycles}
+            time.sleep(args.interval)
     if args.command=="product-v1-status":
         from .human_ops import describe_run
         from .runtime import Runtime
         from .runtime_runner import runtime_db
         from .runner_service import active_run
+        if args.run is None and not (state_root/"active-v1-run.json").exists():
+            return {"run_id":None,"phase":"no_active_run","allowed_actions":[],
+                    "next_instruction":"暂无当前任务。待商品资料与本机受理授权确认后，再通过飞书表单创建任务。",
+                    "read_only":True}
         run_id=active_run(state_root,args.run)
         runtime=Runtime(runtime_db(state_root))
         try:return describe_run(runtime.status(run_id)).as_dict()
         finally:runtime.close()
     if args.command=="human-ui":
         from .human_ui_server import serve_human_ui
-        from .runner_service import active_run
-        run_id=active_run(state_root,args.run)
         if not 1<=args.port<=65535:raise FactoryError("Human UI port 必须在 1 至 65535。")
-        return serve_human_ui(FeishuGateway(config),state_root,run_id,args.port,args.open)
+        return serve_human_ui(FeishuGateway(config),state_root,args.run,args.port,args.open)
     if args.command in ("runner-status","runner-stop"):
         from .runner_service import request_stop,runner_status
         if args.command=="runner-status":return runner_status(state_root,args.run)
@@ -178,11 +218,17 @@ def execute(args):
         finally:state.close()
     if args.command.startswith("runtime-"):
         from .runtime import Runtime
-        from .runtime_runner import (advance_local,create_demo,dispatch_next,materialize_job,
-                                     reject_image,runtime_db,stage_image)
+        from .runtime_runner import (advance_local,create_asset_batch,create_demo,dispatch_next,materialize_job,
+                                     create_topstar_source_batch,reject_image,runtime_db,stage_image)
         with process_lock(state_root):
             if args.command=="runtime-init-demo":
                 return create_demo(state_root,Path(args.template),args.run,args.authorization_id,args.actor_id)
+            if args.command=="runtime-init-asset-batch":
+                return create_asset_batch(state_root,Path(args.template),args.run,
+                                          args.authorization_id,args.actor_id,Path(args.reference_image))
+            if args.command=="runtime-init-topstar-source":
+                return create_topstar_source_batch(state_root,args.run,args.authorization_id,
+                                                   args.actor_id,Path(args.reference_image))
             if args.command=="runtime-advance":return advance_local(state_root,args.run)
             if args.command=="runtime-dispatch-next":return dispatch_next(state_root,args.run)
             if args.command=="runtime-stage-image":

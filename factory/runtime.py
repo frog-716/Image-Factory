@@ -1087,12 +1087,21 @@ class Runtime:
             result.append(value)
         return result
 
-    def claim_outbox(self, owner: str) -> dict | None:
+    def claim_outbox(self, owner: str, run_id: str | None = None) -> dict | None:
         _nonempty_text(owner, "Outbox owner")
+        if run_id is not None:
+            identifier(run_id)
         with self.txn():
-            row = self.db.execute(
-                "SELECT op_id FROM runtime_outbox WHERE state='pending' ORDER BY rowid LIMIT 1"
-            ).fetchone()
+            if run_id is None:
+                row = self.db.execute(
+                    "SELECT op_id FROM runtime_outbox WHERE state='pending' ORDER BY rowid LIMIT 1"
+                ).fetchone()
+            else:
+                row = self.db.execute(
+                    "SELECT op_id FROM runtime_outbox "
+                    "WHERE state='pending' AND run_id=? ORDER BY rowid LIMIT 1",
+                    (run_id,),
+                ).fetchone()
             if row is None:
                 return None
             cur = self.db.execute(

@@ -24,7 +24,8 @@ from typing import Any, Callable
 
 from .runtime import Blocked, Conflict, Runtime, digest
 from .runtime_runner import runtime_db
-from .util import FactoryError, UnknownWrite, confined, file_hash, integer, links, text
+from .util import (FactoryError, UnknownWrite, confined, file_hash, integer,
+                   larkcli_tempdir, links, safe_id, text)
 
 
 STATIC_ROOT = Path(__file__).resolve().parent / "human_ui_static"
@@ -74,13 +75,14 @@ class HumanReviewEngine:
         *,
         reviewer_id: str,
         context_ttl_seconds: int = 1800,
-        on_review_confirmed: Callable[[], None] | None = None,
+        on_review_confirmed: Callable[[str], None] | None = None,
     ):
         if not isinstance(reviewer_id, str) or not reviewer_id.strip():
             raise FactoryError("受信飞书用户身份缺失，拒绝启动审核界面。")
         self.base = base
         self.state_root = Path(state_root).resolve()
         self.run_id = run_id
+        self._fixed_run_id = run_id
         self.reviewer_id = reviewer_id
         self.context_ttl_seconds = integer(
             context_ttl_seconds, "context_ttl_seconds", 60, 86400
@@ -104,7 +106,83 @@ class HumanReviewEngine:
         }
 
     def _runtime(self) -> Runtime:
+        if self.run_id is None:
+            raise Blocked("当前没有活动任务；有任务进入运行后刷新此页面。")
         return Runtime(runtime_db(self.state_root))
+
+    def _refresh_active_run(self) -> str | None:
+        """Resolve the active pointer for an unpinned UI and expire old tokens."""
+        if self._fixed_run_id is not None:
+            return self.run_id
+
+        pointer = self.state_root / "active-v1-run.json"
+        if pointer.is_symlink():
+            raise Blocked("活动运行指针 active-v1-run.json 不能是软链接。")
+        if not pointer.exists():
+            current = None
+        else:
+            try:
+                if not pointer.is_file():
+                    raise ValueError("指针不是普通文件")
+                value = json.loads(pointer.read_text(encoding="utf-8"))
+                if not isinstance(value, dict) or not isinstance(value.get("run_id"), str):
+                    raise ValueError("缺少 run_id")
+                current = safe_id(value["run_id"])
+            except Exception as exc:
+                raise Blocked(
+                    "活动运行指针 active-v1-run.json 无效；请由运行器修复后再刷新。"
+                ) from exc
+
+            database = runtime_db(self.state_root)
+            if database.is_symlink() or not database.is_file():
+                raise Blocked(
+                    "活动运行指针存在，但 Runtime 账本不存在或无效；请检查本机状态目录。"
+                )
+            runtime = Runtime(database)
+            try:
+                runtime.status(current)
+            except Exception as exc:
+                raise Blocked(
+                    "活动运行指针指向的 Runtime 不存在或无法读取；请检查本机状态目录。"
+                ) from exc
+            finally:
+                runtime.close()
+
+        if current != self.run_id:
+            self.run_id = current
+            self._contexts.clear()
+            self._deliveries.clear()
+        return self.run_id
+
+    def _require_active_run(self) -> str:
+        current = self._refresh_active_run()
+        if current is None:
+            raise Blocked("当前没有活动任务；有任务进入运行后刷新此页面。")
+        return current
+
+    def _task_record(self, runtime: Runtime, field_names: list[str]) -> dict | None:
+        plan = runtime.plan(self.run_id)
+        form_task_id = plan.get("form_task_record_id")
+        if form_task_id is None:
+            return self.base.find_unique_typed(
+                "tasks", "任务名", self.run_id, field_names=field_names,
+            )
+        requested = list(dict.fromkeys(field_names +
+            ["运行ID", "命名空间", "模式", "审核策略版本", "商品", "流程"]))
+        task = self.base.get_record("tasks", safe_id(form_task_id), requested)
+        fields = task["fields"]
+        binding = plan.get("intake_binding")
+        frozen = binding.get("task_projection") if isinstance(binding, dict) else None
+        if (not isinstance(frozen, dict) or
+                links(fields.get("商品")) != links(frozen.get("商品")) or
+                links(fields.get("流程")) != links(frozen.get("流程"))):
+            raise Blocked("表单任务商品或流程与冻结 Runtime 不一致。")
+        if (text(fields.get("运行ID")) != self.run_id or
+                text(fields.get("命名空间")) != "V1-DEMO-KIDS" or
+                text(fields.get("模式")) != "demo" or
+                text(fields.get("审核策略版本")) != "demo-v2"):
+            raise Blocked("表单任务与当前 Runtime / Policy 不一致。")
+        return task
 
     def _runtime_review_contract(self, runtime: Runtime) -> tuple[str, str]:
         status = runtime.status(self.run_id)
@@ -113,6 +191,8 @@ class HumanReviewEngine:
             raise Blocked("当前任务已经不在待审核阶段；请刷新页面。")
         plan = runtime.plan(self.run_id)
         mode = plan.get("mode")
+        if mode not in {"demo", "production"}:
+            raise Blocked("Runtime 模式不受支持，拒绝创建审核。")
         step_id = nxt.get("step")
         step = next(
             (item for item in plan.get("steps", []) if item.get("id") == step_id), None
@@ -132,12 +212,8 @@ class HumanReviewEngine:
         raw = composed.get("candidates")
         if not isinstance(raw, dict) or not raw:
             raise Blocked("Runtime 没有当前候选输出。")
-        task = self.base.find_unique_typed(
-            "tasks",
-            "任务名",
-            self.run_id,
-            field_names=["任务名", "运行ID", "命名空间", "模式", "审核策略版本", "系统状态"],
-        )
+        task = self._task_record(runtime,
+            ["任务名", "运行ID", "命名空间", "模式", "审核策略版本", "系统状态"])
         if not task:
             raise Blocked("飞书没有当前 Runtime 对应任务。")
         task_fields = task["fields"]
@@ -252,11 +328,16 @@ class HumanReviewEngine:
     def pending_reviews(self) -> dict:
         with self._lock:
             self._purge_expired()
+            if self._refresh_active_run() is None:
+                return {"items": []}
             runtime = self._runtime()
             try:
+                if runtime.status(self.run_id)["state"] != "waiting_review":
+                    return {"items": []}
                 candidates = self._candidate_rows(runtime)
                 items = []
                 labels = {"outdoor": "户外", "indoor": "室内", "studio": "棚拍"}
+                form_task = "form_task_record_id" in runtime.plan(self.run_id)
                 for candidate in candidates:
                     candidate = {**candidate, "run_id": self.run_id}
                     operation_id = self._operation_id(candidate)
@@ -269,9 +350,20 @@ class HumanReviewEngine:
                         {
                             "review_token": context.token,
                             "display": {
-                                "title": f"{labels.get(context.scene, context.scene)}候选",
+                                "title": ("候选 " + context.slot if form_task else
+                                          f"{labels.get(context.scene, context.scene)}候选"),
                                 "slot": "候选 " + context.slot,
                                 "alt": "待审核候选大图",
+                                "approval_confirmation": (
+                                    ("这是商品的演示候选图。通过表示你已检查商品外观、品牌和场景；"
+                                     "图片仅限演示，不代表可上架或投放。确认通过吗？"
+                                     if form_task else
+                                     "这是虚构商品的演示图片。通过表示你已检查画面，"
+                                     "图片仅限演示，不代表可上架或投放。确认通过吗？")
+                                    if context.mode == "demo"
+                                    else "请确认商品外观、品牌和使用场景都正确。"
+                                    "通过后图片可进入交付，但不会自动上架或投放。确认通过吗？"
+                                ),
                                 "image_url": "/api/v1/reviews/"
                                 + urllib.parse.quote(context.token, safe="")
                                 + "/image",
@@ -290,6 +382,7 @@ class HumanReviewEngine:
 
     def review_image(self, token: str) -> Path:
         with self._lock:
+            self._require_active_run()
             context = self._context(token)
             runtime = self._runtime()
             try:
@@ -396,6 +489,16 @@ class HumanReviewEngine:
             field_names=_REVIEW_FIELDS,
         )
 
+    def _verify_reviewer_identity(self, runtime: Runtime) -> None:
+        identity = self.base.current_user()
+        if not isinstance(identity, dict) or identity.get("open_id") != self.reviewer_id:
+            runtime.audit(
+                self.run_id,
+                "human_review_identity_changed",
+                {"actor_id": self.reviewer_id},
+            )
+            raise Blocked("飞书登录用户已变化；请关闭工作台并用本人账号重新打开。")
+
     def _confirm(self, runtime: Runtime, operation_id: str, payload: dict, row: dict) -> dict:
         self._validate_remote(row, operation_id, payload)
         payload_hash = digest(payload)
@@ -430,7 +533,7 @@ class HumanReviewEngine:
             },
         )
         if self._on_review_confirmed is not None:
-            self._on_review_confirmed()
+            self._on_review_confirmed(payload["run_id"])
         return {"status": "reviewed", "decision": payload["decision"]}
 
     def _reconcile_existing(
@@ -478,9 +581,11 @@ class HumanReviewEngine:
         if len(reason) > 500:
             raise ValueError("reason 最多 500 个字符")
         with self._lock:
+            self._require_active_run()
             context = self._context(token)
             runtime = self._runtime()
             try:
+                self._verify_reviewer_identity(runtime)
                 candidate = self._current_candidate(context, runtime)
                 candidate["run_id"] = self.run_id
                 operation_id = self._operation_id(candidate)
@@ -488,7 +593,7 @@ class HumanReviewEngine:
                 if existing:
                     return existing
                 # Verify the exact remote attachment bytes immediately before review creation.
-                with tempfile.TemporaryDirectory(prefix="image-factory-review-") as directory:
+                with larkcli_tempdir(prefix="image-factory-review-") as directory:
                     downloaded = Path(directory) / "candidate.img"
                     self.base.download_attachment(
                         "assets", candidate["asset_record_id"], candidate["attachment"], downloaded
@@ -502,6 +607,7 @@ class HumanReviewEngine:
                         raise Blocked("当前 Candidate 文件已经变化；旧页面已过期。")
                 revision = self._next_revision(candidate["asset_record_id"])
                 payload = self._payload(candidate, decision, reason, revision)
+                self._verify_reviewer_identity(runtime)
                 runtime.begin_write(operation_id, payload)
                 runtime.audit(
                     self.run_id,
@@ -537,6 +643,8 @@ class HumanReviewEngine:
     def task_list(self) -> dict:
         with self._lock:
             self._purge_expired()
+            if self._refresh_active_run() is None:
+                return {"items": []}
             runtime = self._runtime()
             try:
                 status = runtime.status(self.run_id)
@@ -549,16 +657,24 @@ class HumanReviewEngine:
                     "completed": "已完成",
                     "blocked": "需要管理员核对",
                 }
+                reviews_submitted = False
+                if status["state"] == "waiting_review":
+                    candidates = self._candidate_rows(runtime)
+                    reviews_submitted = bool(candidates) and all(
+                        (runtime.write_status(self._operation_id({**candidate, "run_id": self.run_id})) or {}).get("state")
+                        == "confirmed"
+                        for candidate in candidates
+                    )
                 delivery_url = None
+                no_delivery = False
                 if status["state"] == "completed":
                     output = runtime.step_output(self.run_id, "approved-export")
+                    no_delivery = output.get("status") == "no_delivery"
                     expected_sha = output.get("zip_sha256")
                     expected_path = output.get("zip")
                     if isinstance(expected_sha, str) and isinstance(expected_path, str):
-                        task = self.base.find_unique_typed(
-                            "tasks", "任务名", self.run_id,
-                            field_names=["任务名", "运行ID", "已批准交付包"],
-                        )
+                        task = self._task_record(runtime,
+                            ["任务名", "运行ID", "已批准交付包"])
                         if not task or text(task["fields"].get("运行ID")) != self.run_id:
                             raise Blocked("交付任务与当前 Runtime 不一致。")
                         filename = Path(expected_path).name
@@ -575,13 +691,25 @@ class HumanReviewEngine:
                             filename=filename, sha256=expected_sha,
                         )
                         delivery_url = "/api/v1/deliveries/" + urllib.parse.quote(token, safe="")
+                if no_delivery:
+                    display_status = "无可交付图片"
+                    detail = "全部图片已退回，本次不会生成交付 ZIP。"
+                elif delivery_url:
+                    display_status = "已完成"
+                    detail = "交付包已准备好，可下载已批准图片。"
+                elif reviews_submitted:
+                    display_status = "审核已提交"
+                    detail = "全部图片已审核，等待运行器处理；交付包尚未生成。"
+                else:
+                    display_status = labels.get(status["state"], "处理中")
+                    detail = "审核完成后，批准图片会自动进入交付包。"
                 return {
                     "items": [
                         {
                             "display": {
                                 "title": "童鞋图片任务",
-                                "status": labels.get(status["state"], "处理中"),
-                                "detail": "审核完成后，批准图片会自动进入交付包。",
+                                "status": display_status,
+                                "detail": detail,
                                 "delivery_url": delivery_url,
                             }
                         }
@@ -592,6 +720,7 @@ class HumanReviewEngine:
 
     def delivery_file(self, token: str) -> tuple[bytes, str]:
         with self._lock:
+            self._require_active_run()
             self._purge_expired()
             context = self._deliveries.get(token)
             if context is None:
@@ -600,7 +729,7 @@ class HumanReviewEngine:
             try:
                 if runtime.status(self.run_id)["state"] != "completed":
                     raise Blocked("当前任务尚未完成交付。")
-                with tempfile.TemporaryDirectory(prefix="image-factory-delivery-") as directory:
+                with larkcli_tempdir(prefix="image-factory-delivery-") as directory:
                     target = Path(directory) / context.filename
                     self.base.download_attachment(
                         "tasks", context.task_record_id, context.attachment, target
@@ -700,10 +829,10 @@ class _Handler(BaseHTTPRequestHandler):
     def _handle_error(self, exc: Exception) -> None:
         if isinstance(exc, PermissionError):
             status = HTTPStatus.FORBIDDEN
-        elif isinstance(exc, ValueError):
-            status = HTTPStatus.BAD_REQUEST
         elif isinstance(exc, (Blocked, Conflict)):
             status = HTTPStatus.CONFLICT
+        elif isinstance(exc, ValueError):
+            status = HTTPStatus.BAD_REQUEST
         elif isinstance(exc, UnknownWrite):
             status = HTTPStatus.SERVICE_UNAVAILABLE
         else:
@@ -818,7 +947,13 @@ def build_server(engine: HumanReviewEngine, host: str = "127.0.0.1", port: int =
     return server
 
 
-def serve_human_ui(base, state_root: Path, run_id: str, port: int = 8765, open_browser: bool = False):
+def serve_human_ui(base, state_root: Path, run_id: str | None, port: int = 8765, open_browser: bool = False):
+    if run_id is not None:
+        runtime = Runtime(runtime_db(state_root))
+        try:
+            runtime.status(run_id)
+        finally:
+            runtime.close()
     identity = base.current_user()
     reviewer_id = identity["open_id"]
     allowed = getattr(base, "config", {}).get("reviewer_open_ids", [])
@@ -826,7 +961,7 @@ def serve_human_ui(base, state_root: Path, run_id: str, port: int = 8765, open_b
         raise FactoryError("当前已验证飞书用户不在允许审核人列表。")
     wake_lock = threading.Lock()
 
-    def wake_runner() -> None:
+    def wake_runner(active_run_id: str) -> None:
         def worker() -> None:
             if not wake_lock.acquire(blocking=False):
                 return
@@ -839,7 +974,7 @@ def serve_human_ui(base, state_root: Path, run_id: str, port: int = 8765, open_b
                     try:
                         if getattr(base, "token", None):
                             state.bind_base(base.token)
-                        result = run_once(base, state, state_root, run_id)
+                        result = run_once(base, state, state_root, active_run_id)
                     finally:
                         state.close()
                     if result.get("state") in {"completed", "completed_demo", "waiting_worker"}:
@@ -850,7 +985,7 @@ def serve_human_ui(base, state_root: Path, run_id: str, port: int = 8765, open_b
                 runtime = Runtime(runtime_db(state_root))
                 try:
                     runtime.audit(
-                        run_id,
+                        active_run_id,
                         "human_ui_runner_wake_deferred",
                         {"error_type": type(exc).__name__, "message": str(exc)[:300]},
                     )
@@ -868,6 +1003,7 @@ def serve_human_ui(base, state_root: Path, run_id: str, port: int = 8765, open_b
         reviewer_id=reviewer_id,
         on_review_confirmed=wake_runner,
     )
+    engine._refresh_active_run()
     server = build_server(engine, port=port)
     actual_port = server.server_address[1]
     entry = f"http://127.0.0.1:{actual_port}/?access={server.app.bootstrap_token}"  # type: ignore[attr-defined]

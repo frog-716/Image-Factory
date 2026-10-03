@@ -1,8 +1,10 @@
 # Image Factory V1 恢复交接
 
+> 当前状态（2026-09-27）：本文件以下关于 `V1-DEMO-KIDS-001`、5/6 额度及 waiting_review 的操作是**历史快照，不能作为现役恢复指令执行**。该虚构任务和图片已按用户要求清理，当前 `var/live` 没有活跃任务。请先看 [当前实施记录](../product-v1/LIVE-IMPLEMENTATION.md)；不要重新 seed 或启动旧任务。
+
 新会话先读：根 `AGENTS.md` → `Image-Factory-Build-Kit-v3/START-CODEX.md` → 本目录 `STATUS.json`、`BASELINE.json`、`REUSE-MAP.md`、`TASKBOARD.md`。
 
-## 当前真实状态
+## 2026-09-21 历史快照（恢复前必须重新核对）
 
 - 运行：`V1-DEMO-KIDS-001`
 - Runtime：`waiting_review`
@@ -18,29 +20,13 @@
 .venv/bin/python -m factory --config config.local.json --state var/live schema-check
 ```
 
-若 runner 未运行，可启动：
-
-```bash
-.venv/bin/python -m factory --config config.local.json --state var/live runner-loop --run V1-DEMO-KIDS-001 --interval 60
-```
+不要根据旧心跳自行重启生产。先只读对账 Runtime、飞书候选和审核状态；当前用户要求保持待审 Runtime、不代审、不重画。生产重启必须另有明确授权。
 
 ## 人审与自动收尾
 
-真人必须在飞书为三张候选分别创建审核记录，并填写：
+真人双击 `dist/Image Factory.app`，打开“待我审核”，逐张看大图并明确点“通过”或“退回”；退回原因可选。前端不填写或显示 SHA256、Run ID、审核版本等技术字段。Engine API 根据当前可信 Candidate、SHA256、Runtime、Policy 和审核人身份创建有效记录，经 FeishuGateway 写入飞书；Runner 只能消费 Engine 确认的审核。Codex 不得代点、直接写表或用底表记录绕过 Engine。
 
-- 图片资产：对应候选
-- 目标SHA256：候选记录当前 SHA256
-- 结论：通过 / 驳回
-- 审核人：当前真实审核人
-- 人工确认：勾选
-- Demo视觉检查：勾选（仅“通过”时必须）
-- 仅限演示使用：勾选（仅“通过”时必须）
-- 审核策略版本：`demo-v2`
-- 运行ID：`V1-DEMO-KIDS-001`
-- 审核版本：`1`
-- 原因：非空
-
-系统只读审核表，绝不代建或代勾选。三条回执齐全后，runner 会导出仅含最新批准候选的 ZIP；若全部驳回则明确 `no_delivery`，不创建空 ZIP。随后才写入隔离的 Demo Usage 与模拟指标，并将运行投影为完成。
+三张图都经本人审核、Runner 健康并继续后，“任务与交付”提供仅含批准候选的 ZIP；若全部驳回则明确 `no_delivery`，不创建空 ZIP。之后才可能写入隔离的 Demo Usage 与模拟指标。具体见 [用户指南](../USER-GUIDE.md) 和 [审核提示词](../../prompts/04-REVIEW-DELIVER.md)。
 
 停止和状态入口：
 

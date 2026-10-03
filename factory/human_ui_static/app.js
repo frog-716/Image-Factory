@@ -294,10 +294,16 @@
   function openDecision(item, decision) {
     const reviewToken = reviewTokenOf(item);
     if (!reviewToken || state.inFlight.has(reviewToken)) return;
-    state.pendingDecision = { item, decision, reviewToken };
     const isReject = decision === 'reject';
+    const display = displayOf(item);
+    const approvalNote = text(display.approval_confirmation);
+    if (!isReject && !approvalNote) {
+      showNotice('当前图片缺少审核说明，请刷新页面后再试。', 'error');
+      return;
+    }
+    state.pendingDecision = { item, decision, reviewToken };
     elements.dialogTitle.textContent = isReject ? '确认退回这张图片？' : '确认通过这张图片？';
-    elements.dialogCopy.textContent = isReject ? '退回后，制作流程会根据系统规则继续处理。' : '确认后，系统会记录你的审核决定并继续流程。';
+    elements.dialogCopy.textContent = isReject ? '退回后，制作流程会根据系统规则继续处理。' : approvalNote;
     elements.reasonField.hidden = !isReject;
     elements.reasonInput.value = '';
     elements.confirmDecision.textContent = isReject ? '确认退回' : '确认通过';

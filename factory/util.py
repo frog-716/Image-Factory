@@ -32,6 +32,13 @@ def file_hash(path: Path) -> str:
             h.update(block)
     return h.hexdigest()
 
+def larkcli_tempdir(prefix: str):
+    """Create a temporary directory accepted by lark-cli's local-path guard."""
+    root = Path("/tmp")
+    if not root.is_dir():
+        raise FactoryError("lark-cli 安全下载需要可用的 /tmp 临时目录。")
+    return tempfile.TemporaryDirectory(prefix=prefix, dir=str(root))
+
 def read_json(path: Path) -> Any:
     if path.stat().st_size > 32 * 1024 * 1024:
         raise FactoryError("JSON 文件超过本工具 32MB 限制。")

@@ -16,6 +16,8 @@ class MockBase:
         self.tables = {x:x for x in self.data}
     def save(self):
         write_json(self.path,self.data)
+    def current_user(self):
+        return {"open_id": getattr(self, "mock_reviewer_open_id", "ou_demo")}
     def list(self,table):
         return copy.deepcopy(self.data.get(table,[]))
     def get(self,table,record):

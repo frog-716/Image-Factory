@@ -151,6 +151,40 @@
       {
         "field_name": "生产回执",
         "type": 17
+      },
+      {
+        "field_name": "模式",
+        "type": 3,
+        "property": {
+          "options": [
+            {
+              "name": "demo"
+            },
+            {
+              "name": "production"
+            }
+          ]
+        }
+      },
+      {
+        "field_name": "资产角色",
+        "type": 3,
+        "property": {
+          "options": [
+            {
+              "name": "product_rgba"
+            },
+            {
+              "name": "product_white"
+            },
+            {
+              "name": "background"
+            },
+            {
+              "name": "candidate"
+            }
+          ]
+        }
       }
     ]
   },
@@ -258,6 +292,14 @@
       {
         "field_name": "启用",
         "type": 7
+      },
+      {
+        "field_name": "组件ID",
+        "type": 1
+      },
+      {
+        "field_name": "组件版本",
+        "type": 1
       }
     ]
   },
@@ -267,6 +309,24 @@
       {
         "field_name": "任务名",
         "type": 1
+      },
+      {
+        "field_name": "选择商品",
+        "type": 3,
+        "property": {
+          "options": []
+        }
+      },
+      {
+        "field_name": "创建确认",
+        "type": 3,
+        "property": {
+          "options": [
+            {
+              "name": "确认创建演示任务"
+            }
+          ]
+        }
       },
       {
         "field_name": "商品",
@@ -391,6 +451,38 @@
         "type": 18,
         "target": "tasks",
         "multiple": false
+      },
+      {
+        "field_name": "命名空间",
+        "type": 1
+      },
+      {
+        "field_name": "模式",
+        "type": 3,
+        "property": {
+          "options": [
+            {
+              "name": "demo"
+            },
+            {
+              "name": "production"
+            }
+          ]
+        }
+      },
+      {
+        "field_name": "选用提示词组件",
+        "type": 18,
+        "target": "steps",
+        "multiple": true
+      },
+      {
+        "field_name": "审核策略版本",
+        "type": 1
+      },
+      {
+        "field_name": "运行版本",
+        "type": 2
       }
     ]
   },
@@ -450,6 +542,26 @@
       {
         "field_name": "原因",
         "type": 1
+      },
+      {
+        "field_name": "Demo视觉检查",
+        "type": 7
+      },
+      {
+        "field_name": "仅限演示使用",
+        "type": 7
+      },
+      {
+        "field_name": "审核策略版本",
+        "type": 1
+      },
+      {
+        "field_name": "运行ID",
+        "type": 1
+      },
+      {
+        "field_name": "审核版本",
+        "type": 2
       },
       {
         "field_name": "创建时间",
@@ -521,6 +633,20 @@
       {
         "field_name": "证据",
         "type": 17
+      },
+      {
+        "field_name": "模式",
+        "type": 3,
+        "property": {
+          "options": [
+            {
+              "name": "demo"
+            },
+            {
+              "name": "production"
+            }
+          ]
+        }
       }
     ]
   },
@@ -604,6 +730,20 @@
       {
         "field_name": "样本提醒",
         "type": 1
+      },
+      {
+        "field_name": "模式",
+        "type": 3,
+        "property": {
+          "options": [
+            {
+              "name": "demo"
+            },
+            {
+              "name": "production"
+            }
+          ]
+        }
       }
     ]
   }

@@ -13,8 +13,9 @@ def one(value, label):
         raise FactoryError(f"{label} 必须恰好关联一条记录。")
     return values[0]
 
-def sources(base, task_id: str, max_images: int, max_calls: int, allow_demo=False) -> dict:
-    task = base.get_record("tasks",task_id)["fields"]
+def sources(base, task_id: str, max_images: int, max_calls: int, allow_demo=False,
+            task_fields=None) -> dict:
+    task = task_fields if task_fields is not None else base.get_record("tasks",task_id)["fields"]
     if task.get("取消") is True:
         raise FactoryError("任务已取消。")
     if task.get("提交") is not True:

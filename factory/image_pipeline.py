@@ -31,6 +31,16 @@ FROZEN_GEOMETRY = {
     "crop_policy": "alpha-bbox-only",
 }
 
+# An opt-in processing recipe for future runs.  V1 remains the default so a
+# frozen run can never be silently re-composed with different pixels.
+GROUNDED_GEOMETRY = {
+    **FROZEN_GEOMETRY,
+    "subject_width_fraction": 0.75,
+    "subject_height_fraction": 0.47,
+    "baseline_y_fraction": 0.86,
+    "shadow": "alpha-contact-contour",
+}
+
 _SCENE_TEXT = {
     "outdoor": "空旷的现代儿童活动区，浅蓝远景和少量柔和绿植；前景为平整浅灰运动地面。",
     "indoor": "奶油白儿童房，浅木色地面；后方仅少量无品牌积木，背景虚化。",
@@ -225,7 +235,7 @@ def white_preview(source: str | Path, target: str | Path,
 
 
 def compose(source: str | Path, background: str | Path, target: str | Path,
-            category: str = CATEGORY) -> dict[str, Any]:
+            category: str = CATEGORY, *, recipe: str = "v1") -> dict[str, Any]:
     """Alpha-composite one product source onto one square background.
 
     The background is never cropped or tiled.  The only crop recorded in lineage is
@@ -233,7 +243,9 @@ def compose(source: str | Path, background: str | Path, target: str | Path,
     padding from changing the frozen placement geometry and is not a collage crop.
     """
     _check_category(category)
-    from PIL import Image
+    from PIL import Image, ImageDraw, ImageFilter
+    if recipe not in {"v1", "grounded-v2"}:
+        raise ContractError("不支持的合成版本。")
 
     product, source_info = validate_product(source, category=category)
     canvas, background_info = _load(background, "背景")
@@ -245,7 +257,7 @@ def compose(source: str | Path, background: str | Path, target: str | Path,
     if output_path.resolve() in {source_resolved, background_resolved}:
         raise ContractError("候选图不能覆盖输入素材。")
 
-    geometry = copy.deepcopy(FROZEN_GEOMETRY)
+    geometry = copy.deepcopy(FROZEN_GEOMETRY if recipe == "v1" else GROUNDED_GEOMETRY)
     alpha_bbox = tuple(source_info["bbox"])
     foreground = product.crop(alpha_bbox)
     scale = min(
@@ -262,23 +274,51 @@ def compose(source: str | Path, background: str | Path, target: str | Path,
         round(canvas.height * geometry["baseline_y_fraction"]) - size[1],
     )
     canvas = canvas.convert("RGBA")
+    shadow: str | dict[str, Any] = "none"
+    transforms = [
+        {"operation": "alpha_bbox_crop", "bbox": list(alpha_bbox)},
+        {"operation": "resize", "resampling": geometry["resampling"], "scale": scale},
+    ]
+    if recipe == "grounded-v2":
+        # Follow the visible bottom edge at each x instead of placing one dark
+        # oval across empty gaps between shoes.  The foreground itself hides
+        # the upper half of this soft contact cue.
+        alpha = foreground.getchannel("A")
+        pixels = alpha.load()
+        blur_radius = max(1, round(canvas.width * 0.006))
+        shadow_depth = max(2, round(canvas.height * 0.009))
+        mask = Image.new("L", canvas.size, 0)
+        pen = ImageDraw.Draw(mask)
+        for x in range(size[0]):
+            bottom = next((y for y in range(size[1] - 1, -1, -1)
+                           if pixels[x, y] >= 24), None)
+            if bottom is not None:
+                y = position[1] + bottom
+                pen.line((position[0] + x, y - 2,
+                          position[0] + x, y + shadow_depth), fill=90)
+        mask = mask.filter(ImageFilter.GaussianBlur(blur_radius))
+        shadow_layer = Image.new("RGBA", canvas.size, (24, 31, 43, 0))
+        shadow_layer.putalpha(mask)
+        canvas = Image.alpha_composite(canvas, shadow_layer)
+        shadow = {"kind": "alpha-contact-contour", "color": "#181f2b",
+                  "max_alpha": 90, "blur_radius": blur_radius,
+                  "depth": shadow_depth, "alpha_cutoff": 24}
+        transforms.append({"operation": "contact_shadow", **shadow})
     canvas.alpha_composite(foreground, position)
     canvas.convert("RGB").save(output_path, format="PNG")
     output_info = _output_info(output_path, canvas.width, canvas.height)
     background_info.update({"role": "background"})
+    operation = "alpha-composite-v1" if recipe == "v1" else "alpha-composite-grounded-v2"
+    transforms.append({"operation": "alpha_composite", "position": list(position)})
     processing = {
-        "operation": "alpha-composite-v1",
+        "operation": operation,
         "geometry": geometry,
         "alpha_bbox": list(alpha_bbox),
         "product_size": list(size),
         "position": list(position),
         "scale": scale,
-        "shadow": "none",
-        "transforms": [
-            {"operation": "alpha_bbox_crop", "bbox": list(alpha_bbox)},
-            {"operation": "resize", "resampling": geometry["resampling"], "scale": scale},
-            {"operation": "alpha_composite", "position": list(position)},
-        ],
+        "shadow": shadow,
+        "transforms": transforms,
         "collage": False,
         "background_crop": False,
     }
@@ -287,15 +327,15 @@ def compose(source: str | Path, background: str | Path, target: str | Path,
     result = {
         "schema_version": 1,
         "category": category,
-        "operation": "alpha-composite-v1",
+        "operation": operation,
         "source": copy.deepcopy(source_info),
         "background": copy.deepcopy(background_info),
         "output": output_info,
         "output_size": [canvas.width, canvas.height],
         "product_size": list(size),
         "position": list(position),
-        "algorithm": "alpha-composite-v1",
-        "shadow": "none",
+        "algorithm": operation,
+        "shadow": shadow,
         "warning": "透视、光照和主体接触自然度仍需人工视觉审核。",
         "processing": processing,
         "lineage": lineage,
@@ -310,7 +350,8 @@ def composite(source: str | Path, background: str | Path, target: str | Path,
 
 
 def compose_candidates(source: str | Path, backgrounds: Mapping[str, str | Path],
-                       output_dir: str | Path, category: str = CATEGORY) -> dict[str, Any]:
+                       output_dir: str | Path, category: str = CATEGORY, *,
+                       recipe: str = "v1") -> dict[str, Any]:
     """Compose the three independent V1 scene candidates from one source.
 
     This helper only accepts the fixed scene set and writes one PNG per scene.  It
@@ -329,7 +370,8 @@ def compose_candidates(source: str | Path, backgrounds: Mapping[str, str | Path]
     results: dict[str, Any] = {}
     for scene in expected:
         target = folder / f"candidate-{scene}.png"
-        results[scene] = compose(source, backgrounds[scene], target, category=category)
+        results[scene] = compose(source, backgrounds[scene], target,
+                                 category=category, recipe=recipe)
         results[scene]["scene"] = scene
     return results
 

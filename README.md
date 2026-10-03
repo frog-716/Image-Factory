@@ -1,14 +1,14 @@
 # TOPSTAR 图片工厂 · 飞书优先 V1.0
 
-**你在飞书管理商品、选素材、改提示词、下任务和审图；独立 Runtime 推进流程，Codex 只承担运行中的 AI／原生生图节点。**
+**飞书管理商品、素材、提示词、流程与任务；本机 Human UI 供本人审图和领交付；独立 Runtime 推进流程，Codex 只承担运行中的 AI／原生生图节点。**
 
-这是可运行的本地执行器、飞书建模/视图脚本、Codex Skill 与操作提示词的组合。日常管理界面在飞书，电脑上的目录只承担缓存、确定性处理与执行账本。
+这是可运行的本地执行器、飞书建模/视图脚本、Codex Skill 与操作提示词的组合。飞书是业务数据平台；本机 App 是两页人工操作层；电脑上的目录承担缓存、确定性处理与执行账本。当前 App 不提供创建任务页面。飞书 BaseApp 有“创建任务”表单：六项业务资料加一项明确的创建确认。Engine 已有受信接单代码，但当前本机尚无针对 TOPSTAR 商品的授权和受理配置，商品选项也未更新，**请勿提交新生产任务**；不能把可见表单说成已经可用的成品界面。
 
 ## 先看交付边界
 
 已经验证：离线完整演练、单元/故障注入/接口模拟测试。测试证据见 [evidence/test-results.txt](evidence/test-results.txt) 和 [evidence/validation.json](evidence/validation.json)。
 
-尚未验证：你的飞书租户权限、已安装 larkcli 的具体版本、你的 Codex 原生生图权限和真实商品质量。本包没有连接你的账号，没有采集拼多多图片，没有生成真实 TOPSTAR 成图。不能把模拟通过写成真实上线验收通过。
+本节的通用模板声明不能替代当前环境验收：实际账号、larkcli、原生生图与真实商品质量分别以当次账本和验收记录为准。用户已声明拥有所收集 TOPSTAR 图片的演示生图使用许可；这项声明不等于真实发布许可，也不把白底图变成透明商品原图。目前没有生成真实 TOPSTAR 成图，不能把模拟通过写成真实上线验收通过。
 
 本版支持 macOS、Linux、WSL，Python 3.10+；使用单机进程锁，不支持 Windows 原生命令行或多电脑抢同一任务。脚本不会调用图片 API，不需要 OpenAI API Key，不会在额度不足时暗中改走付费 API。
 
@@ -25,7 +25,7 @@ python -m factory demo --out var/my-first-demo
 
 打开 `var/my-first-demo/index.html`。你会看到程序绘制的 3 张模拟候选、2 张模拟批准、1 张驳回，以及生成的 ZIP 和模拟反馈记录。演练不连接外部账号、不调用图片模型。已有同名演练目录时换一个 `--out`，不会覆盖旧记录。
 
-现役 `V1-DEMO-KIDS-001` 的人工入口是 macOS App：双击 [`dist/Image Factory.app`](dist/Image%20Factory.app)，再点“启动并打开审核工作台”。第一次打开会在线验证当前 lark-cli user；浏览器显示“待我审核”和“任务与交付”。看大图后点通过或退回即可，SHA256、Asset/Run/Workflow ID、审核策略和版本均由 Engine 自动绑定。App 只启动本机 `127.0.0.1` Human UI，不启动生产、不生成图片、不预留额度；使用时保持 App 打开，退出 App 会停止它自己启动的服务。App 内有“使用教程”。
+旧虚构童鞋 `V1-DEMO-KIDS-001` 已按用户要求清理，当前**没有待审核任务**。双击 [`dist/Image Factory.app`](dist/Image%20Factory.app)后，点“启动并打开审核工作台”仍可打开空工作台，看到“待我审核”和“任务与交付”；它不会把旧任务重新创建。新的 TOPSTAR 演示任务只有经受信流程建立后才会出现。审核时无需填写 SHA256 或技术编号。App 启动本机 `127.0.0.1` Human UI；仅当本机以后存在明确批准、绑定商品的受信授权时，才另启只负责排队的 Engine 接单进程。当前未启用接单，也不会启动生产、生图或预留额度；使用时保持 App 打开。
 
 这个 App 依赖旁边的 Image-Factory 项目文件夹，不要单独移走。需要重建时，在项目根目录运行 `macos/build-app.sh`；生成物位于 `dist/Image Factory.app`，使用本机 ad-hoc 签名，尚未公证。原有 `启动审核界面.command` 仍可作为备用入口。
 
@@ -51,7 +51,7 @@ python -m factory demo --out var/my-first-demo
                   ↓
 Codex 读取队列 → 脚本校验和冻结 → 原生生图 → 脚本合成和归档
                   ↓
-飞书成图画册 → 人工审核 → 仅批准图片进入交付 ZIP
+飞书成图画册 → Human UI 本人看图确认 → 仅批准图片进入交付 ZIP
                   ↓
 人工上架 → 登记具体使用位置 → 导入真实原始计数 → 下次创意参考
 ```
@@ -62,6 +62,7 @@ Codex 读取队列 → 脚本校验和冻结 → 原生生图 → 脚本合成�
 
 | 入口 | 用途 |
 |---|---|
+| [MAP.md](MAP.md) | 项目结构、模块关系和主要流程的速查地图 |
 | [AGENTS.md](AGENTS.md) | Codex 不得绕过的执行和诚实性规则 |
 | [prompts/00-START-HERE.md](prompts/00-START-HERE.md) | 全流程总指挥提示词 |
 | `prompts/01...07` | 初始化、入库、生产、审核、反馈、恢复、复审 |
@@ -78,6 +79,8 @@ Codex 读取队列 → 脚本校验和冻结 → 原生生图 → 脚本合成�
 | `启动审核界面.command` | 启动两页本机 Human UI；审核只经 Engine API 与 FeishuGateway |
 | `tests/` | 可重复运行的测试 |
 | `templates/` | 飞书字段、流程、商品/任务/回执/反馈模板 |
+| [TOPSTAR 参考图](assets/topstar-public/README.md) | 已获准公开收录的 30 张商品参考图；不等于商业发布授权 |
+| [飞书表单快照](docs/product-v1/form-questions-before-explicit-submit-20260927.json) | 经用户授权随仓库公开的表单字段快照 |
 | `examples/offline-demo/` | 已运行的完整模拟证据与可浏览结果 |
 
 ## 重要约束
@@ -88,4 +91,4 @@ Codex 读取队列 → 脚本校验和冻结 → 原生生图 → 脚本合成�
 
 V1 可通过项目根目录的 `启动图片工厂.command` 运行受控单进程循环：它持久化心跳、预算、Attempt 和状态投影，遇到原生生图时明确停在 `waiting_worker`。本机当前未证明 headless 原生生图，因此运行器不会伪装能在无 Codex 会话时自动画图。详见 [V1 用户指南](docs/USER-GUIDE.md)。
 
-脚本的技术检查不等于品牌或渠道审核。真实审核必须由人操作飞书；实际发布保留人工。整体质量、授权和业务归因仍需人工确认。
+脚本的技术检查不等于品牌或渠道审核。当前 V1 审核由本人在 App 中看图并明确确认，Engine API 才能写入受信审核记录；普通用户无需进入飞书审核底表。实际发布保留人工。整体质量、授权和业务归因仍需人工确认。

@@ -2,16 +2,38 @@ from __future__ import annotations
 import copy
 import io
 import json
+import re
 import shutil
+import tempfile
 import uuid
 import zipfile
 from datetime import datetime
 from pathlib import Path
 from .media import inspect_image, compose
 from .model import sources, compile_prompt
+from .schema import TASK_INPUTS
 from .state import State
 from .util import (FactoryError, canonical, confined, digest, file_hash, integer,
-                   links, now, read_json, safe_id, text, write_json, atomic_write)
+                   larkcli_tempdir, links, now, read_json, safe_id, text,
+                   write_json, atomic_write)
+
+
+_FORM_CREATE_CONFIRMATION = "确认创建演示任务"
+
+
+def _is_form_create_confirmation(value):
+    return (
+        isinstance(value, str) and value == _FORM_CREATE_CONFIRMATION
+    ) or (
+        isinstance(value, list) and len(value) == 1 and
+        isinstance(value[0], str) and value[0] == _FORM_CREATE_CONFIRMATION
+    )
+
+
+def _freeze_form_create_confirmation(value):
+    if _is_form_create_confirmation(value):
+        return _FORM_CREATE_CONFIRMATION
+    return copy.deepcopy(value)
 
 
 def deterministic_zip(target: Path, entries: dict[str,bytes]):
@@ -36,6 +58,583 @@ class Engine:
     def current_source(self,task_id):
         return sources(self.base,task_id,self.config.get("max_images_per_task",12),
                        self.config.get("max_calls_per_task",18),self.allow_demo)
+
+    def preview_form_record(self, task_id):
+        """Validate the Feishu business form without writing or dispatching it.
+
+        The profile is trusted local Engine configuration, never browser/form input.
+        A successful preview is not an authorization to submit or produce images.
+        """
+        safe_id(task_id)
+        profile = self._validated_intake_profile()
+        raw = self.base.get_record("tasks", task_id)["fields"]
+        business_fields = {
+            "图片用途", "消费场景", "视觉风格", "附加要求", "数量", "创建确认",
+        }
+        controlled = (set(TASK_INPUTS) - business_fields - {"任务名"}) | {
+            "提交", "取消", "系统状态", "运行ID", "错误摘要",
+            "最新档案SHA256", "运行档案", "已批准交付包",
+        }
+        if any(raw.get(name) is not None and raw.get(name) != "" and
+               raw.get(name) != [] and raw.get(name) is not False for name in controlled):
+            raise FactoryError("表单记录含系统技术字段，不能按普通用户任务受理。")
+        return self._form_source_from_fields(task_id, raw, profile)
+
+    def _validated_intake_profile(self):
+        profile = self.config.get("intake_profile")
+        required = ("allowed_product_ids", "workflow_id", "channel", "placement",
+                    "namespace", "mode", "review_policy_version", "max_calls")
+        if not isinstance(profile, dict) or any(key not in profile for key in required):
+            raise FactoryError("受信任务受理配置不存在或不完整。")
+        scope = profile["allowed_product_ids"]
+        if not isinstance(scope, list) or any(not isinstance(item, str) for item in scope):
+            raise FactoryError("受信任务受理配置的商品范围必须是记录 ID 列表。")
+        mode, policy = profile["mode"], profile["review_policy_version"]
+        if ((mode == "demo" and (policy != "demo-v2" or
+             not text(profile["namespace"]).startswith("V1-DEMO-KIDS"))) or
+            (mode == "production" and policy != "production-v1") or
+            mode not in {"demo", "production"}):
+            raise FactoryError("受信任务受理配置的模式、命名空间与审核策略不匹配。")
+        max_calls = integer(profile["max_calls"], "图片调用上限", 1,
+                            6 if mode == "demo" else self.config.get("max_calls_per_task", 18))
+        return profile
+
+    def _form_business_fields(self, raw):
+        names = ("选择商品", "图片用途", "消费场景", "视觉风格", "数量", "附加要求")
+        fields = {name: copy.deepcopy(raw.get(name)) for name in names}
+        fields["创建确认"] = _freeze_form_create_confirmation(raw.get("创建确认"))
+        return fields
+
+    def _form_selected_product(self, raw, profile):
+        choice = raw.get("选择商品")
+        if isinstance(choice, list) and len(choice) == 1:
+            choice = choice[0]
+        if not isinstance(choice, str) or not choice.strip():
+            raise FactoryError("请选择一个商品。")
+        product = self.base.find_unique_typed("products", "商品名", choice.strip())
+        if not product or product["record_id"] not in profile["allowed_product_ids"]:
+            raise FactoryError("该商品不在当前受理范围内。")
+        return choice.strip(), product
+
+    def _form_source_from_fields(self, task_id, raw, profile):
+        max_calls = integer(
+            profile["max_calls"], "图片调用上限", 1,
+            6 if profile["mode"] == "demo" else self.config.get("max_calls_per_task", 18),
+        )
+        choice, product = self._form_selected_product(raw, profile)
+        task = {
+            "任务名": "生图任务：" + choice.strip(),
+            "商品": [product["record_id"]],
+            "流程": [safe_id(profile["workflow_id"])],
+            "渠道": text(profile["channel"]),
+            "图片用途": raw.get("图片用途"),
+            "消费场景": raw.get("消费场景"),
+            "版位": text(profile["placement"]),
+            "视觉风格": raw.get("视觉风格"),
+            "附加要求": raw.get("附加要求"),
+            "数量": raw.get("数量"),
+            "创建确认": _freeze_form_create_confirmation(raw.get("创建确认")),
+            "最多调用次数": max_calls,
+            "提交": True,
+            "取消": False,
+            "示例数据": profile["mode"] == "demo",
+            "命名空间": text(profile["namespace"]),
+            "模式": text(profile["mode"]),
+            "审核策略版本": text(profile["review_policy_version"]),
+        }
+        source = sources(self.base, task_id, self.config.get("max_images_per_task",12),
+                         self.config.get("max_calls_per_task",18),
+                         allow_demo=self.allow_demo or profile["mode"] == "demo",
+                         task_fields=task)
+        want_demo = profile["mode"] == "demo"
+        members = [source["product"], source["flow"]] + [a["fields"] for a in source["assets"]]
+        if any((member.get("示例数据") is True) != want_demo for member in members):
+            raise FactoryError("商品、流程与素材的 Demo/Production 模式必须与任务一致。")
+        with larkcli_tempdir(prefix="image-factory-intake-") as temp:
+            for asset in source["assets"]:
+                path = Path(temp) / safe_id(asset["record_id"])
+                self.base.download_attachment("assets", asset["record_id"],
+                                              asset["attachment"], path)
+                info = inspect_image(path, self.config.get("max_image_bytes", 20*1024*1024))
+                expected = text(asset["fields"].get("SHA256")).lower()
+                if not re.fullmatch(r"[0-9a-f]{64}", expected):
+                    raise FactoryError("素材缺少有效 SHA256，禁止受理。")
+                if expected != info["sha256"]:
+                    raise FactoryError("素材附件与已登记 SHA256 不一致，禁止受理。")
+                if (source["mode"] == "背景合成" and
+                    text(asset["fields"].get("类型")) == "商品原图" and
+                    not info["has_transparency"]):
+                    raise FactoryError("背景合成需要透明商品原图；白底图不能直接受理。")
+        return source
+
+    def _form_task_projection(self, source, profile, run_id):
+        fields = copy.deepcopy(source["task"])
+        fields.update({
+            "系统状态": ["待生图"], "运行ID": run_id, "错误摘要": "",
+            "命名空间": profile["namespace"], "模式": ["demo"],
+            "审核策略版本": "demo-v2", "运行版本": 0,
+            "提交": True, "取消": False,
+        })
+        return fields
+
+    def _form_projection_matches(self, actual, expected):
+        if not isinstance(actual, dict):
+            return False
+        for name, wanted in expected.items():
+            got = actual.get(name)
+            if name in {"商品", "流程", "选用素材", "返工来源", "选用提示词组件"}:
+                equal = links(got) == links(wanted)
+            elif isinstance(wanted, list) and all(isinstance(item, str) for item in wanted):
+                equal = text(got) == "".join(wanted)
+            elif isinstance(wanted, str):
+                equal = text(got) == wanted
+            elif isinstance(wanted, (int, float)) and not isinstance(wanted, bool):
+                equal = (isinstance(got, (int, float)) and not isinstance(got, bool)
+                         and float(got) == float(wanted))
+            else:
+                equal = got == wanted
+            if not equal:
+                return False
+        return True
+
+    def _read_form_active_pointer(self, pointer_path):
+        if pointer_path.is_symlink():
+            raise FactoryError("active-v1-run 指针不能是软链接。")
+        if not pointer_path.exists():
+            return None
+        if not pointer_path.is_file():
+            raise FactoryError("active-v1-run 指针必须是普通文件。")
+        pointer = read_json(pointer_path)
+        if (not isinstance(pointer, dict) or
+                set(pointer) != {"run_id", "authorization_id"}):
+            raise FactoryError("active-v1-run 指针格式无效。")
+        safe_id(pointer.get("run_id", ""))
+        safe_id(pointer.get("authorization_id", ""))
+        return pointer
+
+    def _form_runtime_plan(self, source, profile, task_id, grant, run_id,
+                           business_fields, task_projection):
+        product_assets = [asset for asset in source["assets"]
+                          if text(asset["fields"].get("类型")) == "商品原图"]
+        if len(product_assets) != 1:
+            raise FactoryError("表单受理需要唯一的默认商品原图。")
+        product_asset = product_assets[0]
+        expected_sha = text(product_asset["fields"].get("SHA256")).lower()
+        relative_snapshot = (
+            "references/form-intake/" + run_id + "-" +
+            safe_id(product_asset["record_id"]) + "-" + expected_sha + ".png"
+        )
+        snapshot = confined(self.state.root, relative_snapshot)
+        from .image_pipeline import validate_product
+        _, snapshot_info = validate_product(snapshot)
+        if snapshot_info["sha256"] != expected_sha:
+            raise FactoryError("商品原图快照 SHA256 与当前素材不一致。")
+
+        template_path = Path(__file__).resolve().parents[1] / "templates" / "runtime-workflow-kids-demo-v1.json"
+        plan = read_json(template_path)
+        plan["run_id"] = run_id
+        plan["max_image_calls"] = source["max_calls"]
+        plan["authorization_id"] = safe_id(grant["authorization_id"])
+        plan["authorization_scope"] = copy.deepcopy(grant["scope"])
+        plan["form_task_record_id"] = task_id
+        plan["intake_binding"] = {
+            "form_task_record_id": task_id,
+            "business_fields": copy.deepcopy(business_fields),
+            "business_fields_sha256": digest(business_fields),
+            "source_sha256": digest(source),
+            "profile_sha256": digest(profile),
+            "grant_sha256": digest(grant),
+            "task_projection": copy.deepcopy(task_projection),
+        }
+        plan["steps"][0] = {
+            "id": "product-source",
+            "kind": "compose",
+            "depends_on": [],
+            "operation": "import_product_source",
+            "reference_asset": {
+                "local_path": relative_snapshot,
+                "sha256": expected_sha,
+                # Runtime output.source_asset_id is a Feishu record ID.
+                "asset_id": product_asset["record_id"],
+                "business_asset_id": text(product_asset["fields"].get("资产ID")),
+            },
+        }
+        background_steps = [step for step in plan["steps"]
+                            if step.get("id") in {
+                                "background-outdoor", "background-indoor", "background-studio"
+                            }]
+        if len(background_steps) != 3:
+            raise FactoryError("受信 Runtime 模板必须恰有 3 个背景步骤。")
+        composition_directions = (
+            "宽景构图：镜头稍远，环境留白更多，商品摆放区清楚完整。",
+            "中景构图：环境细节适中，商品摆放区位于画面中部偏下。",
+            "极简构图：减少背景装饰，突出干净平整的商品摆放区。",
+        )
+        for index, (step, direction) in enumerate(zip(background_steps, composition_directions), 1):
+            step["visual_prompt"] = compile_prompt(source, index) + "\n\n" + direction
+        composition = [step for step in plan["steps"]
+                       if step.get("id") == "candidate-composition"]
+        if len(composition) != 1 or composition[0].get("expected_outputs") != 3:
+            raise FactoryError("受信 Runtime 模板必须保留 3 候选合成节点。")
+        return plan
+
+    def _validated_form_grant(self, profile, grant, minimum_calls, product_record_id):
+        if not isinstance(grant, dict) or grant.get("approved") is not True:
+            raise FactoryError("表单受理需要显式批准的受信授权。")
+        authorization_id = safe_id(grant.get("authorization_id", ""))
+        actor_id = grant.get("actor_id")
+        if not isinstance(actor_id, str) or not actor_id.strip():
+            raise FactoryError("受信授权必须明确记录授权人。")
+        safe_id(actor_id)
+        scope = grant.get("scope")
+        category = profile.get("category", "kids_shoes")
+        if (not isinstance(scope, dict) or
+                scope.get("namespace") != profile["namespace"] or
+                scope.get("mode") != profile["mode"] or
+                scope.get("category") != category or
+                category != "kids_shoes"):
+            raise FactoryError("受信授权的命名空间、模式或品类与本地受理配置不一致。")
+        if scope.get("product_record_id") != product_record_id:
+            raise FactoryError("受信授权未绑定表单当前选中的商品。")
+        limit = grant.get("project_image_calls_limit")
+        if type(limit) is not int or limit < minimum_calls:
+            raise FactoryError("受信授权的图片调用上限不足任务预算。")
+        return authorization_id, scope
+
+    def _reconcile_form_admission(self, task_id, raw, profile, grant,
+                                  authorization_id, run_id):
+        from .runtime import Runtime
+        from .runtime_runner import runtime_db
+
+        runtime = Runtime(runtime_db(self.state.root), single_instance=True)
+        try:
+            row = runtime.db.execute(
+                "SELECT plan_hash FROM runtime_runs WHERE id=?", (run_id,)
+            ).fetchone()
+            if row is None:
+                raise FactoryError("表单显示已有运行ID，但本地 Runtime 没有对应冻结运行。")
+            task_run_value = text(raw.get("运行ID"))
+            if task_run_value not in (None, "", run_id):
+                raise FactoryError("飞书任务行自称绑定其他运行，不能重用现有 Runtime。")
+            task_written = task_run_value == run_id
+            plan = runtime.plan(run_id)
+            status = runtime.status(run_id)
+            if digest(plan) != row[0]:
+                raise FactoryError("Runtime 冻结 plan 与账本 SHA256 不一致。")
+            if (status["state"] != "queued" or status["image_calls_reserved"] != 0 or
+                    status["next"].get("step") != "product-source"):
+                raise FactoryError("已受理 Runtime 不再处于零调用 queued 状态，不能按表单重试。")
+            other_active = runtime.db.execute(
+                "SELECT id FROM runtime_runs WHERE id<>? AND state<>'completed' LIMIT 1",
+                (run_id,),
+            ).fetchone()
+            if other_active:
+                raise FactoryError("存在另一条未完成 Runtime；不能恢复表单指针。")
+            binding = plan.get("intake_binding")
+            if (not isinstance(binding, dict) or
+                    plan.get("form_task_record_id") != task_id or
+                    binding.get("form_task_record_id") != task_id or
+                    plan.get("run_id") != run_id or
+                    plan.get("authorization_id") != authorization_id or
+                    plan.get("authorization_scope") != grant.get("scope") or
+                    binding.get("profile_sha256") != digest(profile) or
+                    binding.get("grant_sha256") != digest(grant)):
+                raise FactoryError("重试表单的授权或受信配置与冻结 Runtime 不一致。")
+            if task_written and raw.get("命名空间") != profile["namespace"]:
+                raise FactoryError("飞书任务行命名空间与受信配置不一致。")
+
+            business_fields = self._form_business_fields(raw)
+            if (business_fields != binding.get("business_fields") or
+                    digest(business_fields) != binding.get("business_fields_sha256")):
+                raise FactoryError("已受理表单的业务字段发生变化，不能替换冻结运行。")
+            source = self._form_source_from_fields(task_id, raw, profile)
+            self._validated_form_grant(
+                profile, grant, source["max_calls"], source["product_id"],
+            )
+            if digest(source) != binding.get("source_sha256"):
+                raise FactoryError("商品、流程或素材来源与冻结受理时不一致。")
+            task_projection = self._form_task_projection(source, profile, run_id)
+            if task_projection != binding.get("task_projection"):
+                raise FactoryError("冻结任务投影与 Runtime 绑定不一致。")
+            plan_expected = self._form_runtime_plan(
+                source, profile, task_id, grant, run_id,
+                business_fields, task_projection,
+            )
+            if plan != plan_expected:
+                raise FactoryError("Runtime plan 与当前表单、授权或业务来源不一致。")
+
+            if task_written:
+                for name in ("最新档案SHA256", "运行档案", "已批准交付包"):
+                    value = raw.get(name)
+                    if value is not None and value != "" and value != [] and value is not False:
+                        raise FactoryError("飞书任务行含冻结投影之外的技术字段，停止重试。")
+                if not self._form_projection_matches(raw, task_projection):
+                    raise FactoryError("飞书任务行与冻结 Runtime 投影不一致。")
+
+            pointer_path = self.state.root / "active-v1-run.json"
+            active_pointer = {"run_id": run_id, "authorization_id": authorization_id}
+            active_before = self._read_form_active_pointer(pointer_path)
+            if active_before is not None and active_before != active_pointer:
+                previous_run_id = active_before["run_id"]
+                previous_status = runtime.status(previous_run_id)
+                previous_grant = runtime.registered_dispatch_authorization(previous_run_id)
+                if (previous_status["state"] != "completed" or
+                        previous_grant.get("authorization_id") != active_before["authorization_id"]):
+                    raise FactoryError("active-v1-run 指向未完成或授权不一致的 Runtime。")
+
+            registered = runtime.registered_dispatch_authorization(run_id)
+            if (registered.get("approved") is not True or
+                    registered.get("authorization_id") != authorization_id or
+                    registered.get("scope") != grant.get("scope") or
+                    registered.get("project_image_calls_limit") != grant.get("project_image_calls_limit") or
+                    registered.get("actor_id") != grant.get("actor_id")):
+                raise FactoryError("Runtime 中登记的授权与本次受信授权不一致。")
+
+            pointer_effect_key = f"form-intake:active-v1-run:{run_id}"
+
+            def find_active_pointer():
+                return (active_pointer if
+                        self._read_form_active_pointer(pointer_path) == active_pointer
+                        else None)
+
+            def write_missing_pointer():
+                if self._read_form_active_pointer(pointer_path) != active_before:
+                    raise FactoryError("active-v1-run 在恢复期间发生变化，拒绝覆盖。")
+                write_json(pointer_path, active_pointer)
+                return active_pointer
+
+            self.state.effect(pointer_effect_key, find_active_pointer, write_missing_pointer)
+            if self._read_form_active_pointer(pointer_path) != active_pointer:
+                raise FactoryError("Runtime 与 active-v1-run 指针不一致。")
+        finally:
+            runtime.close()
+
+        record_key = f"form-intake:task:{task_id}:{run_id}"
+        effect_row = self.state.db.execute(
+            "SELECT state FROM effects WHERE key=?", (record_key,)
+        ).fetchone()
+        effect_state = effect_row[0] if effect_row else None
+        if not task_written and effect_state == "done":
+            raise FactoryError("State.effect 已确认任务写回，但 Feishu 行缺少对应运行ID。")
+        if not task_written and effect_state is None:
+            business_names = {
+                "选择商品", "图片用途", "消费场景", "视觉风格", "数量", "附加要求",
+                "创建确认",
+            }
+            controlled = (set(TASK_INPUTS) - business_names - {"任务名"}) | {
+                "提交", "取消", "系统状态", "运行ID", "错误摘要",
+                "最新档案SHA256", "运行档案", "已批准交付包",
+            }
+            if any(raw.get(name) is not None and raw.get(name) != "" and
+                   raw.get(name) != [] and raw.get(name) is not False for name in controlled):
+                raise FactoryError("Runtime 已冻结但任务行含部分或冲突写回，停止恢复。")
+
+        def find_projection():
+            current = self.base.get_record("tasks", task_id)
+            if self._form_projection_matches(current["fields"], task_projection):
+                return current
+            return None
+
+        self.state.effect(
+            record_key,
+            find_projection,
+            lambda: self.base.update_record("tasks", task_id, task_projection),
+        )
+        if not self._form_projection_matches(
+                self.base.get_record("tasks", task_id)["fields"], task_projection):
+            raise FactoryError("飞书任务投影在重试读回时发生变化。")
+        return {
+            "run_id": run_id,
+            "task_record_id": task_id,
+            "product_record_id": source["product_id"],
+            "workflow_record_id": source["flow_id"],
+            "runtime_result": "existing",
+            "status": status,
+        }
+
+    def admit_form_record(self, task_id, grant):
+        """Queue the validated demo form on the V1 Runtime without dispatching.
+
+        ``grant`` is supplied by a trusted caller. None of its authorization
+        fields are read from the form record.
+        """
+        safe_id(task_id)
+        profile = self._validated_intake_profile()
+        if profile["mode"] != "demo" or profile["review_policy_version"] != "demo-v2":
+            raise FactoryError("表单受理目前只支持 demo-v2、背景合成和 3 个候选。")
+        if profile["namespace"] != "V1-DEMO-KIDS":
+            raise FactoryError("表单受理的命名空间必须精确为 V1-DEMO-KIDS，避免下游投影无法识别。")
+        run_id = "V1-DEMO-KIDS-" + digest({
+            "namespace": profile["namespace"], "form_record_id": task_id,
+        })[:24]
+        safe_id(run_id)
+        initial_record = self.base.get_record("tasks", task_id)
+        initial_raw = initial_record["fields"]
+        _, selected_product = self._form_selected_product(initial_raw, profile)
+        authorization_id, _ = self._validated_form_grant(
+            profile, grant, profile["max_calls"], selected_product["record_id"],
+        )
+
+        from .runtime import Runtime
+        from .runtime_runner import runtime_db
+        runtime = Runtime(runtime_db(self.state.root), single_instance=True)
+        try:
+            exists = runtime.db.execute(
+                "SELECT 1 FROM runtime_runs WHERE id=?", (run_id,)
+            ).fetchone() is not None
+            other_active = runtime.db.execute(
+                "SELECT id FROM runtime_runs WHERE id<>? AND state<>'completed' LIMIT 1",
+                (run_id,),
+            ).fetchone()
+        finally:
+            runtime.close()
+        if exists or initial_raw.get("运行ID"):
+            return self._reconcile_form_admission(
+                task_id, initial_raw, profile, grant, authorization_id, run_id,
+            )
+        if other_active:
+            raise FactoryError("已有未完成 Runtime；先恢复或完成原任务，不能另建表单运行。")
+
+        if not _is_form_create_confirmation(initial_raw.get("创建确认")):
+            raise FactoryError("请先选择“确认创建演示任务”后再创建任务。")
+
+        pointer_effect = self.state.db.execute(
+            "SELECT key FROM effects WHERE state='unknown' AND "
+            "(key='form-intake:active-v1-run' OR key LIKE 'form-intake:active-v1-run:%') "
+            "LIMIT 1"
+        ).fetchone()
+        if pointer_effect:
+            raise FactoryError(
+                "active-v1-run 存在结果不确定的写入；先只读核对原运行，不得开始新运行。"
+            )
+
+        business_fields = self._form_business_fields(initial_raw)
+        source = self.preview_form_record(task_id)
+        current_raw = self.base.get_record("tasks", task_id)["fields"]
+        if self._form_business_fields(current_raw) != business_fields:
+            raise FactoryError("表单业务字段在预览期间发生变化，请重新确认后提交。")
+        if (source["mode"] != "背景合成" or source["count"] != 3 or
+                source["task_mode"] != "demo" or source["category"] != "kids_shoes"):
+            raise FactoryError("表单受理目前只支持 demo-v2、背景合成和 3 个候选。")
+        self._validated_form_grant(
+            profile, grant, source["max_calls"], source["product_id"],
+        )
+
+        pointer_path = self.state.root / "active-v1-run.json"
+        active_before = self._read_form_active_pointer(pointer_path)
+        active_pointer = {"run_id": run_id, "authorization_id": authorization_id}
+        if active_before is not None and active_before != active_pointer:
+            if active_before["authorization_id"] == authorization_id:
+                raise FactoryError("后续表单必须使用明确的新受信授权，不能复用旧 Runtime 授权。")
+            previous_run_id = active_before["run_id"]
+            runtime = Runtime(runtime_db(self.state.root), single_instance=True)
+            try:
+                previous_status = runtime.status(previous_run_id)
+                previous_grant = runtime.registered_dispatch_authorization(previous_run_id)
+                if (previous_status["state"] != "completed" or
+                        previous_grant.get("authorization_id") != active_before["authorization_id"]):
+                    raise FactoryError(
+                        "已有 active-v1-run 尚未完成或授权不一致，不能受理另一表单。"
+                    )
+            finally:
+                runtime.close()
+
+        product_asset = next(asset for asset in source["assets"]
+                             if text(asset["fields"].get("类型")) == "商品原图")
+        expected_sha = text(product_asset["fields"].get("SHA256")).lower()
+        relative_snapshot = (
+            "references/form-intake/" + run_id + "-" +
+            safe_id(product_asset["record_id"]) + "-" + expected_sha + ".png"
+        )
+        snapshot = confined(self.state.root, relative_snapshot, must_exist=False)
+        with tempfile.TemporaryDirectory(prefix=".form-intake-", dir=str(self.state.root)) as temp:
+            downloaded = Path(temp) / "product-source"
+            self.base.download_attachment("assets", product_asset["record_id"],
+                                          product_asset["attachment"], downloaded)
+            downloaded_info = inspect_image(
+                downloaded, self.config.get("max_image_bytes", 20 * 1024 * 1024))
+            if (downloaded_info["sha256"] != expected_sha or
+                    downloaded_info["format"] != "PNG" or
+                    not downloaded_info["has_transparency"]):
+                raise FactoryError("商品原图快照必须与登记 SHA256 一致且为真实透明 PNG。")
+
+            if snapshot.exists():
+                if not snapshot.is_file() or file_hash(snapshot) != expected_sha:
+                    raise FactoryError("商品原图快照路径已有不同文件，禁止覆盖。")
+            else:
+                snapshot.parent.mkdir(parents=True, exist_ok=True)
+                snapshot = confined(self.state.root, relative_snapshot, must_exist=False)
+                try:
+                    with downloaded.open("rb") as source_file, snapshot.open("xb") as target_file:
+                        shutil.copyfileobj(source_file, target_file)
+                except FileExistsError:
+                    if snapshot.is_symlink() or not snapshot.is_file() or file_hash(snapshot) != expected_sha:
+                        raise FactoryError("商品原图快照并发冲突，禁止覆盖。")
+                except Exception:
+                    if snapshot.exists() and file_hash(snapshot) != expected_sha:
+                        snapshot.unlink()
+                    raise
+
+        from .image_pipeline import validate_product
+        _, snapshot_info = validate_product(snapshot)
+        if snapshot_info["sha256"] != expected_sha:
+            raise FactoryError("商品原图快照写入后 SHA256 不一致。")
+
+        task_projection = self._form_task_projection(source, profile, run_id)
+        plan = self._form_runtime_plan(
+            source, profile, task_id, grant, run_id,
+            business_fields, task_projection,
+        )
+
+        runtime = Runtime(runtime_db(self.state.root), single_instance=True)
+        try:
+            created = runtime.create(plan, authorization=grant)
+            status = runtime.status(run_id)
+            if status["state"] != "queued" or status["image_calls_reserved"] != 0:
+                raise FactoryError("Runtime 未保持 queued 且零调用预算状态，停止表单写回。")
+        finally:
+            runtime.close()
+
+        pointer_effect_key = f"form-intake:active-v1-run:{run_id}"
+
+        def find_active_pointer():
+            return (active_pointer if
+                    self._read_form_active_pointer(pointer_path) == active_pointer
+                    else None)
+
+        def write_active_pointer():
+            if self._read_form_active_pointer(pointer_path) != active_before:
+                raise FactoryError("active-v1-run 在新运行排队期间发生变化，拒绝覆盖。")
+            write_json(pointer_path, active_pointer)
+            return active_pointer
+
+        self.state.effect(
+            pointer_effect_key,
+            find_active_pointer,
+            write_active_pointer,
+        )
+        if self._read_form_active_pointer(pointer_path) != active_pointer:
+            raise FactoryError("active-v1-run 指针写入后读回不一致。")
+
+        self.state.effect(
+            f"form-intake:task:{task_id}:{run_id}",
+            lambda: (self.base.get_record("tasks", task_id)
+                     if self._form_projection_matches(
+                         self.base.get_record("tasks", task_id)["fields"], task_projection
+                     ) else None),
+            lambda: self.base.update_record("tasks", task_id, task_projection),
+        )
+        if not self._form_projection_matches(
+                self.base.get_record("tasks", task_id)["fields"], task_projection):
+            raise FactoryError("表单任务技术字段写入后读回不一致。")
+        return {
+            "run_id": run_id,
+            "task_record_id": task_id,
+            "product_record_id": source["product_id"],
+            "workflow_record_id": source["flow_id"],
+            "runtime_result": created,
+            "status": status,
+        }
 
     def run_root(self,run_id):
         return self.state.root/"runs"/safe_id(run_id)

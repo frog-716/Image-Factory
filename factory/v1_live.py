@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import shutil
+import tempfile
 from pathlib import Path
 
 from .image_pipeline import PRODUCT_SOURCE, background
@@ -13,10 +14,93 @@ from .util import FactoryError, canonical, confined, file_hash, links, safe_id, 
 NAMESPACE="V1-DEMO-KIDS"
 POLICY="demo-v2"
 _LINK_FIELDS={"流程","商品","选用提示词组件","来源任务","默认商品素材"}
+_TASK_FIELDS=["任务名","命名空间","模式","审核策略版本","运行ID","商品","流程",
+             "示例数据","取消","提交","运行版本","系统状态"]
 
 
 def _find(base,table,field,value,fields=None):
     return base.find_unique_typed(table,field,value,field_names=fields or [field])
+
+
+def _runtime_task(base,run_id:str,plan:dict):
+    """Resolve the task from a frozen form ID when present; retain legacy name lookup."""
+    if not isinstance(plan,dict):
+        raise FactoryError("V1 Runtime 冻结计划格式无效。")
+    if "form_task_record_id" in plan:
+        task_id=plan.get("form_task_record_id")
+        try:safe_id(task_id)
+        except FactoryError as exc:
+            raise FactoryError("V1 Runtime 表单任务记录 ID 无效。") from exc
+        task=base.get_record("tasks",task_id,_TASK_FIELDS)
+        if task.get("record_id")!=task_id:
+            raise FactoryError("V1 Runtime 表单任务记录读回 ID 不一致。")
+        binding=plan.get("intake_binding")
+        frozen=binding.get("task_projection") if isinstance(binding,dict) else None
+        if (not isinstance(frozen,dict) or
+                links(task["fields"].get("商品"))!=links(frozen.get("商品")) or
+                links(task["fields"].get("流程"))!=links(frozen.get("流程"))):
+            raise FactoryError("表单任务商品或流程与冻结 Runtime 不一致，停止投影。")
+    else:
+        task=_find(base,"tasks","任务名",run_id,_TASK_FIELDS)
+    if not task:
+        raise FactoryError("先执行 v1-demo-seed。")
+    fields=task["fields"]
+    if (text(fields.get("运行ID"))!=run_id or text(fields.get("命名空间"))!=NAMESPACE
+            or text(fields.get("模式"))!="demo" or text(fields.get("审核策略版本"))!=POLICY):
+        raise FactoryError("V1 Demo 任务运行ID、命名空间、模式或审核策略不匹配。")
+    return task
+
+
+def _product_source_step(plan:dict)->dict:
+    steps=plan.get("steps")
+    if not isinstance(steps,list):
+        raise FactoryError("V1 Runtime 冻结计划缺少步骤列表。")
+    matches=[step for step in steps if isinstance(step,dict) and step.get("id")=="product-source"]
+    if len(matches)!=1:
+        raise FactoryError("V1 Runtime 必须恰有一个 product-source 步骤。")
+    return matches[0]
+
+
+def _verify_imported_source(base,step:dict,output:dict,path:Path,product_id:str,
+                            download_root:Path)->str:
+    """Recheck the imported source against its frozen plan and Feishu record."""
+    reference=step.get("reference_asset")
+    if not isinstance(reference,dict):
+        raise FactoryError("导入商品原图缺少冻结 reference_asset。")
+    record_id=safe_id(reference.get("asset_id"))
+    business_id=safe_id(reference.get("business_asset_id"))
+    expected_sha=reference.get("sha256")
+    if (not isinstance(expected_sha,str) or len(expected_sha)!=64
+            or any(char not in "0123456789abcdef" for char in expected_sha)):
+        raise FactoryError("导入商品原图冻结 SHA256 无效。")
+    if output.get("source_asset_id")!=record_id or output.get("sha256")!=expected_sha:
+        raise FactoryError("Runtime 商品原图输出与冻结素材记录或 SHA256 不一致。")
+    if file_hash(path)!=expected_sha:
+        raise FactoryError("Runtime 商品原图文件与冻结 SHA256 不一致。")
+
+    row=base.get_record("assets",record_id,["资产ID","类型","商品","来源说明","授权说明",
+        "允许用于生图","SHA256","示例数据","图片"])
+    fields=row["fields"]
+    if (text(fields.get("资产ID"))!=business_id
+            or text(fields.get("类型"))!="商品原图"
+            or links(fields.get("商品"))!=[product_id]
+            or fields.get("允许用于生图") is not True
+            or not text(fields.get("来源说明")) or not text(fields.get("授权说明"))
+            or fields.get("示例数据") is not True
+            or text(fields.get("SHA256"))!=expected_sha):
+        raise FactoryError("导入商品原图的商品、授权、模式、业务 ID 或 SHA256 已变化。")
+    attachments=fields.get("图片") or []
+    if (len(attachments)!=1 or not isinstance(attachments[0],dict)
+            or not isinstance(attachments[0].get("file_token"),str)
+            or not attachments[0]["file_token"]):
+        raise FactoryError("导入商品原图必须恰有一个有效图片附件。")
+    download_root.mkdir(parents=True,exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".v1-source-check-",dir=str(download_root)) as temp:
+        downloaded=Path(temp)/"source.png"
+        base.download_attachment("assets",record_id,attachments[0],downloaded)
+        if file_hash(downloaded)!=expected_sha:
+            raise FactoryError("导入商品原图附件内容与登记 SHA256 不一致。")
+    return record_id
 
 
 def _record(state,base,table,key_field,fields,effect_key):
@@ -110,49 +194,70 @@ def _receipt_output(runtime,run_id,step_id):
 
 def publish_candidates(base,state,state_root:Path,run_id:str)->dict:
     if not run_id.startswith(NAMESPACE+"-"):raise FactoryError("拒绝非 V1-DEMO-KIDS 运行。")
-    task=_find(base,"tasks","任务名",run_id,["任务名","命名空间","模式","审核策略版本","运行ID","商品"])
-    if not task:raise FactoryError("先执行 v1-demo-seed。")
-    tf=task["fields"]
-    if text(tf.get("命名空间"))!=NAMESPACE or text(tf.get("模式"))!="demo" or text(tf.get("审核策略版本"))!=POLICY or text(tf.get("运行ID"))!=run_id:
-        raise FactoryError("V1 Demo 任务模式、命名空间、策略或运行ID不匹配。")
-    product_ids=links(tf.get("商品"))
-    if len(product_ids)!=1:raise FactoryError("V1 Demo 任务必须关联一个商品。")
     runtime=Runtime(runtime_db(state_root))
     try:
+        plan=runtime.plan(run_id)
+        task=_runtime_task(base,run_id,plan)
+        product_ids=links(task["fields"].get("商品"))
+        if len(product_ids)!=1:raise FactoryError("V1 Demo 任务必须关联一个商品。")
         nxt=runtime.next(run_id)
         if nxt.get("state")!="waiting_review":raise Blocked("Runtime 尚未进入 waiting_review。")
         source=_receipt_output(runtime,run_id,"product-source")
+        source_step=_product_source_step(plan)
         white=runtime.step_output(run_id,"white-preview")["output"]
         backgrounds={scene:_receipt_output(runtime,run_id,"background-"+scene) for scene in ("outdoor","indoor","studio")}
         candidates=runtime.step_output(run_id,"candidate-composition")["candidates"]
     finally:runtime.close()
+    is_import=(source_step.get("kind")=="compose" and
+               source_step.get("operation")=="import_product_source")
+    has_source_asset_id="source_asset_id" in source
+    if "form_task_record_id" in plan and not is_import:
+        raise FactoryError("表单 Runtime 的商品原图步骤必须显式导入现有商品原图。")
+    if has_source_asset_id and not is_import:
+        raise FactoryError("Runtime 输出带已有素材 ID，但冻结步骤未 opt-in 导入。")
+    if is_import and not has_source_asset_id:
+        raise FactoryError("导入商品原图 Runtime 输出缺少 source_asset_id。")
+    download_root=state_root/"runtime-runs"/run_id/"roundtrip"
+    imported_source_id=None
+    if is_import:
+        source_path=confined(state_root,source.get("local_path"))
+        imported_source_id=_verify_imported_source(
+            base,source_step,source,source_path,product_ids[0],download_root)
     roles=[("PRODUCT-RGBA","商品透明源","商品原图","product_rgba","",source),
            ("PRODUCT-WHITE","白底展示图","商品原图","product_white","",white)]
-    for scene in ("outdoor","indoor","studio"):
-        roles.append(("BG-"+scene.upper(),scene+" 背景","场景参考","background","",backgrounds[scene]))
     slots={"outdoor":"A","indoor":"B","studio":"C"}
     for scene in ("outdoor","indoor","studio"):
-        roles.append(("CAND-"+scene.upper(),scene+" 候选","生成成图","candidate",slots[scene],candidates[scene]["output"]))
-    created={};download_root=state_root/"runtime-runs"/run_id/"roundtrip"
+        label=("背景方案 "+slots[scene]) if imported_source_id else scene+" 背景"
+        roles.append(("BG-"+scene.upper(),label,"场景参考","background","",backgrounds[scene]))
+    for scene in ("outdoor","indoor","studio"):
+        label=("候选 "+slots[scene]) if imported_source_id else scene+" 候选"
+        roles.append(("CAND-"+scene.upper(),label,"生成成图","candidate",slots[scene],candidates[scene]["output"]))
+    created={}
+    derived_authorization=("基于已授权商品素材的 Demo 派生图，仅供演示审核；禁止真实发布投放"
+                          if imported_source_id else "仅限 V1 虚构童鞋 Demo；禁止真实发布或投放。")
     for suffix,label,asset_type,role,slot,output in roles:
+        if role=="product_rgba" and imported_source_id:
+            created[run_id+"-"+suffix]=imported_source_id
+            continue
         path=confined(state_root,output["local_path"])
         asset_id=run_id+"-"+suffix
         fields={"素材名":run_id+" / "+label,"资产ID":asset_id,"类型":[asset_type],
                 "商品":product_ids,"来源任务":[task["record_id"]],"来源说明":"V1 Runtime 冻结链路，详见本地账本与回执。",
-                "授权说明":"仅限 V1 虚构童鞋 Demo；禁止真实发布或投放。","允许用于生图":False,
+                "授权说明":derived_authorization,"允许用于生图":False,
                 "SHA256":file_hash(path),"示例数据":True,"槽位":slot,"运行ID":run_id,
                 "模式":["demo"],"资产角色":[role]}
         if role=="candidate":fields["审核状态"]=["待审核"]
         row=_record(state,base,"assets","资产ID",fields,f"v1-asset:{asset_id}")
         _upload_checked(base,state,"assets",row["record_id"],"图片",path,download_root)
         created[asset_id]=row["record_id"]
-    source_id=created[run_id+"-PRODUCT-RGBA"]
-    product=base.get_record("products",product_ids[0],["默认商品素材","商品照片"])
-    if links(product["fields"].get("默认商品素材")) not in ([],[source_id]):
-        raise FactoryError("Demo 商品已有不同默认商品素材，停止覆盖。")
-    state.effect(f"v1-product-source:{run_id}",
-        lambda:True if links(base.get_record("products",product_ids[0],["默认商品素材"])["fields"].get("默认商品素材"))==[source_id] else None,
-        lambda:base.update_record("products",product_ids[0],{"默认商品素材":[source_id]}))
+    if imported_source_id is None:
+        source_id=created[run_id+"-PRODUCT-RGBA"]
+        product=base.get_record("products",product_ids[0],["默认商品素材","商品照片"])
+        if links(product["fields"].get("默认商品素材")) not in ([],[source_id]):
+            raise FactoryError("Demo 商品已有不同默认商品素材，停止覆盖。")
+        state.effect(f"v1-product-source:{run_id}",
+            lambda:True if links(base.get_record("products",product_ids[0],["默认商品素材"])["fields"].get("默认商品素材"))==[source_id] else None,
+            lambda:base.update_record("products",product_ids[0],{"默认商品素材":[source_id]}))
     white_path=confined(state_root,white["local_path"])
     _upload_checked(base,state,"products",product_ids[0],"商品照片",white_path,download_root)
     state.effect(f"v1-task-wait-review:{run_id}",
@@ -166,12 +271,14 @@ def publish_candidates(base,state,state_root:Path,run_id:str)->dict:
 def sync_review_to_runtime(base,state_root:Path,run_id:str)->dict:
     """Read trusted Feishu-created review rows; never creates or edits reviews."""
     from .demo_live import _candidate_rows,_demo_task_base,_latest_review
-    task,product,product_id=_demo_task_base(base,_find(base,"tasks","任务名",run_id,["任务名"])["record_id"])
-    candidates=_candidate_rows(base,task,product_id)
-    snapshot={"run_id":run_id,"mode":"demo","candidates":[],"events":[]}
-    missing=[]
     runtime=Runtime(runtime_db(state_root))
     try:
+        plan=runtime.plan(run_id)
+        task_ref=_runtime_task(base,run_id,plan)
+        task,product,product_id=_demo_task_base(base,task_ref["record_id"])
+        candidates=_candidate_rows(base,task,product_id)
+        snapshot={"run_id":run_id,"mode":"demo","candidates":[],"events":[]}
+        missing=[]
         confirmed=runtime.confirmed_review_records(run_id)
         allowed=set(confirmed)
         for row in candidates:
@@ -213,14 +320,12 @@ _STATUS_MAP={"queued":"待生图","running":"生成中","waiting_worker":"生成
 
 def project_status_outbox(base,state_root:Path,run_id:str,limit:int=100)->dict:
     """Replay only status projections; it cannot dispatch or regenerate images."""
-    task=_find(base,"tasks","任务名",run_id,["任务名","运行ID","命名空间","运行版本","系统状态"])
-    if not task or text(task["fields"].get("命名空间"))!=NAMESPACE:
-        raise FactoryError("找不到目标 V1-DEMO-KIDS 任务。")
     runtime=Runtime(runtime_db(state_root))
     done=[]
     try:
+        task=_runtime_task(base,run_id,runtime.plan(run_id))
         for _ in range(limit):
-            op=runtime.claim_outbox("v1-status-projector")
+            op=runtime.claim_outbox("v1-status-projector",run_id=run_id)
             if op is None:break
             if op.get("run_id")!=run_id or op.get("kind")!="status_projection":
                 runtime.unknown_outbox(op["op_id"],"projector scope mismatch")

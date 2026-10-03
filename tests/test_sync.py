@@ -106,9 +106,28 @@ class BootstrapTests(unittest.TestCase):
     def tearDown(self):self.s.close();self.temp.cleanup()
     def test_dry_run_has_no_writes(self):
         result=bootstrap(self.base,self.s,self.config,False);self.assertEqual(len(result['tables']),8);self.assertEqual(self.transport.writes,[])
+    def test_reading_template_matches_machine_schema_contract(self):
+        template = json.loads((Path(__file__).resolve().parents[1] / 'templates' / 'feishu-schema.json').read_text())
+        self.assertEqual(template, TABLES)
     def test_bootstrap_and_schema_contract(self):
         bootstrap(self.base,self.s,self.config,True);self.assertEqual(schema_check(self.base)['tables_checked'],8)
         self.assertEqual(len(read_json(self.config)['tables']),8)
+    def test_product_form_fields_are_required_by_schema_contract(self):
+        names = {field['field_name']: field for field in TABLES['tasks']['fields']}
+        self.assertEqual(names['选择商品']['type'], 3)
+        self.assertEqual(names['创建确认']['type'], 3)
+        self.assertEqual(
+            names['创建确认']['property']['options'],
+            [{'name': '确认创建演示任务'}],
+        )
+        bootstrap(self.base,self.s,self.config,True)
+        table_id = self.base.tables['tasks']
+        self.transport.fields[table_id] = [
+            field for field in self.transport.fields[table_id]
+            if field['field_name'] != '创建确认'
+        ]
+        with self.assertRaises(FactoryError):
+            schema_check(self.base)
     def test_repeated_bootstrap_does_not_duplicate(self):
         bootstrap(self.base,self.s,self.config,True);before=len(self.transport.writes)
         bootstrap(self.base,self.s,self.config,True);self.assertEqual(len(self.transport.writes),before)

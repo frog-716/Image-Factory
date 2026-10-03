@@ -63,6 +63,32 @@ class TransportTests(unittest.TestCase):
         ):
             with self.subTest(changed=changed),self.assertRaises(FactoryError):
                 LarkCLI.user_from_auth_status(changed)
+    def test_transient_unready_user_retries_verified_status_without_login(self):
+        cli=object.__new__(LarkCLI);cli.bin='/test/lark-cli';cli.identity='user';cli.timeout=3
+        unready={"identity":"user","identities":{"user":{"available":True,
+                 "status":"refreshing","tokenStatus":"invalid","openId":"ou_trusted"}}}
+        ready={"identity":"user","identities":{"user":{"available":True,
+               "status":"ready","tokenStatus":"valid","openId":"ou_trusted"}}}
+        replies=[Mock(returncode=0,stdout=json.dumps(item),stderr='') for item in (unready,ready)]
+        with patch('factory.lark.subprocess.run',side_effect=replies) as run:
+            self.assertEqual(cli.current_user()['open_id'],'ou_trusted')
+        self.assertEqual(run.call_count,2)
+        for call in run.call_args_list:
+            self.assertEqual(call.args[0],['/test/lark-cli','auth','status','--json','--verify'])
+            self.assertFalse(call.kwargs['shell'])
+    def test_persistent_unready_user_and_bot_identity_never_unlock_review(self):
+        cli=object.__new__(LarkCLI);cli.bin='/test/lark-cli';cli.identity='user';cli.timeout=3
+        unready={"identity":"user","identities":{"user":{"available":True,
+                 "status":"refreshing","tokenStatus":"invalid","openId":"ou_trusted"}}}
+        response=Mock(returncode=0,stdout=json.dumps(unready),stderr='')
+        with (patch('factory.lark.subprocess.run',return_value=response) as run,
+              patch('factory.lark.time.sleep')):
+            with self.assertRaises(FactoryError):cli.current_user()
+        self.assertEqual(run.call_count,2)
+        bot=Mock(returncode=0,stdout=json.dumps({"identity":"bot"}),stderr='')
+        with patch('factory.lark.subprocess.run',return_value=bot) as run:
+            with self.assertRaises(FactoryError):cli.current_user()
+        self.assertEqual(run.call_count,1)
     def test_nested_error_not_ignored(self):
         with self.assertRaises(FactoryError):LarkCLI.decode('{"ok":true,"data":{"code":999,"data":{}}}','',0)
     def test_stderr_error(self):

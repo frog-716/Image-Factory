@@ -10,7 +10,7 @@ from pathlib import Path
 from .demo_live import create_demo_usage,demo_export,demo_import_metrics
 from .runtime import Runtime
 from .runtime_runner import advance_local,dispatch_next,runtime_db
-from .util import FactoryError,atomic_write,now,process_lock,read_json,text,write_json
+from .util import FactoryError,atomic_write,links,now,process_lock,read_json,safe_id,text,write_json
 from .v1_live import project_status_outbox,publish_candidates,sync_review_to_runtime
 
 
@@ -50,7 +50,26 @@ def request_stop(state_root:Path,run_id:str|None)->dict:
     atomic_write(path,(now()+"\n").encode());return {"run_id":run_id,"stop_requested":True}
 
 
-def _task_id(base,run_id):
+def _task_id(base,run_id,runtime=None):
+    if runtime is not None:
+        plan=runtime.plan(run_id)
+        form_task_id=plan.get("form_task_record_id")
+        if form_task_id is not None:
+            row=base.get_record("tasks",safe_id(form_task_id),
+                ["运行ID","命名空间","模式","审核策略版本","商品","流程"])
+            fields=row["fields"]
+            if (text(fields.get("运行ID"))!=run_id or
+                    text(fields.get("命名空间"))!="V1-DEMO-KIDS" or
+                    text(fields.get("模式"))!="demo" or
+                    text(fields.get("审核策略版本"))!="demo-v2"):
+                raise FactoryError("表单任务与冻结 Runtime 的运行ID、命名空间或审核策略不一致。")
+            binding=plan.get("intake_binding")
+            frozen=binding.get("task_projection") if isinstance(binding,dict) else None
+            if (not isinstance(frozen,dict) or
+                    links(fields.get("商品"))!=links(frozen.get("商品")) or
+                    links(fields.get("流程"))!=links(frozen.get("流程"))):
+                raise FactoryError("表单任务商品或流程与冻结 Runtime 不一致。")
+            return row["record_id"]
     row=base.find_unique_typed("tasks","任务名",run_id,field_names=["任务名"])
     if not row:raise FactoryError("找不到 V1 Demo 任务。")
     return row["record_id"]
@@ -67,7 +86,7 @@ def _finish_export(base,state,state_root,run_id,runtime):
         trusted={event.get("review_record_id") for event in review["events"]}
         if None in trusted or len(trusted)!=len(review["events"]):
             raise FactoryError("Runtime 审核快照缺少 Engine 确认的审核记录。")
-        result=demo_export(base,state,_task_id(base,run_id),allowed_review_record_ids=trusted)
+        result=demo_export(base,state,_task_id(base,run_id,runtime),allowed_review_record_ids=trusted)
     runtime.finish_local(run_id,"approved-export",result)
     return result
 
@@ -80,7 +99,7 @@ def _finish_metrics(base,state,state_root,run_id,runtime):
     rows=[]
     for index,image in enumerate(export["manifest"]["images"],1):
         usage_id=f"{run_id}-USE-{index:03d}"
-        create_demo_usage(base,state,_task_id(base,run_id),image["asset_record_id"],usage_id,
+        create_demo_usage(base,state,_task_id(base,run_id,runtime),image["asset_record_id"],usage_id,
                           "DEMO","SIMULATED","Demo Review","SIM-"+str(index),
                           "2026-09-21T00:00:00+08:00")
         rows.append({"placement_id":usage_id,"date":"2026-09-21","timezone":"Asia/Shanghai",
@@ -91,7 +110,7 @@ def _finish_metrics(base,state,state_root,run_id,runtime):
     writer.writeheader();writer.writerows(rows)
     path=state_root.resolve()/"runtime-runs"/run_id/"simulated-metrics.csv"
     atomic_write(path,stream.getvalue().encode())
-    result=demo_import_metrics(base,state,_task_id(base,run_id),path,1)
+    result=demo_import_metrics(base,state,_task_id(base,run_id,runtime),path,1)
     runtime.finish_local(run_id,"demo-feedback",result);return result
 
 

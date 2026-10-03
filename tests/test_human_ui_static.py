@@ -69,6 +69,7 @@ class HumanUiStaticTests(unittest.TestCase):
         self.assertIn("showModal", self.js)
         self.assertIn("确认通过这张图片？", self.js)
         self.assertIn("确认退回这张图片？", self.js)
+        self.assertIn("display.approval_confirmation", self.js)
         self.assertIn("maxlength=\"500\"", self.html)
         self.assertIn("[hidden]", self.css)
         self.assertRegex(self.css, r"\[hidden\]\s*\{[^}]*display:\s*none\s*!important")

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "category": "kids_shoes",
+  "run_id": "FICTIONAL-ASSET-REPLACE",
+  "mode": "demo",
+  "workflow_version": "fictional-kids-catalog-views-v1",
+  "max_image_calls": 5,
+  "steps": [
+    {
+      "id": "side-view",
+      "kind": "image_generate",
+      "depends_on": [],
+      "output_role": "catalog_image",
+      "independent_image_count": 1,
+      "visual_prompt": "参考冻结的虚构童鞋原图，生成同一双白蓝儿童运动鞋的纯侧面电商图；两只鞋完整、鞋头朝左，白色无缝背景，主体占画面约 75%，鞋底自然接触地面。保持鞋型、织物、蓝白配色、魔术贴、鞋带和鞋底纹路一致。不加文字、品牌、人物、拼图或水印。"
+    },
+    {
+      "id": "front-view",
+      "kind": "image_generate",
+      "depends_on": ["side-view"],
+      "output_role": "catalog_image",
+      "independent_image_count": 1,
+      "visual_prompt": "参考冻结的虚构童鞋原图，生成同一双白蓝儿童运动鞋鞋头正对镜头的正面电商图；两只鞋完整并排，白色无缝背景，主体占画面约 75%，鞋底自然接触地面。保持鞋型、织物、蓝白配色、魔术贴、鞋带和鞋底纹路一致。不加文字、品牌、人物、拼图或水印。"
+    },
+    {
+      "id": "rear-view",
+      "kind": "image_generate",
+      "depends_on": ["front-view"],
+      "output_role": "catalog_image",
+      "independent_image_count": 1,
+      "visual_prompt": "参考冻结的虚构童鞋原图，生成同一双白蓝儿童运动鞋鞋跟正对镜头的背面电商图；两只鞋完整并排，白色无缝背景，主体占画面约 75%，鞋底自然接触地面。保持鞋型、织物、蓝白配色、鞋跟提环和鞋底纹路一致。不加文字、品牌、人物、拼图或水印。"
+    },
+    {
+      "id": "outsole-view",
+      "kind": "image_generate",
+      "depends_on": ["rear-view"],
+      "output_role": "catalog_image",
+      "independent_image_count": 1,
+      "visual_prompt": "参考冻结的虚构童鞋原图，生成同款一只白蓝儿童运动鞋的完整鞋底正视电商图；鞋底朝向镜头展示纹路，整只鞋完整不裁切，白色无缝背景，主体占画面约 75%。保持鞋底厚度、蓝白配色和鞋型一致，不虚构功能参数。不加文字、品牌、人物、拼图或水印。"
+    },
+    {
+      "id": "top-view",
+      "kind": "image_generate",
+      "depends_on": ["outsole-view"],
+      "output_role": "catalog_image",
+      "independent_image_count": 1,
+      "visual_prompt": "参考冻结的虚构童鞋原图，生成同一双白蓝儿童运动鞋的垂直俯视电商图；两只鞋完整分开，清楚展示鞋面、魔术贴、鞋带和鞋口，白色无缝背景，主体占画面约 75%。保持鞋型、织物、蓝白配色和鞋底边缘一致。不加文字、品牌、人物、拼图或水印。"
+    }
+  ]
+}

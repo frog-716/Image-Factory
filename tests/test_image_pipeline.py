@@ -90,6 +90,34 @@ class ImagePipelineTests(unittest.TestCase):
         with self.assertRaises(FactoryError):
             compose(self.product, non_square, self.root / "bad.png")
 
+    def test_grounded_recipe_is_opt_in_and_records_its_visible_shadow(self):
+        old_target = self.root / "old-candidate.png"
+        new_target = self.root / "grounded-candidate.png"
+        old = compose(self.product, self.background, old_target)
+        new = compose(self.product, self.background, new_target, recipe="grounded-v2")
+        self.assertEqual(old["algorithm"], "alpha-composite-v1")
+        self.assertEqual(old["shadow"], "none")
+        self.assertEqual(new["algorithm"], "alpha-composite-grounded-v2")
+        self.assertGreater(new["product_size"][0], old["product_size"][0])
+        self.assertEqual(new["processing"]["shadow"]["kind"], "alpha-contact-contour")
+        self.assertIn("shadow", new["lineage"]["processing"])
+        with Image.open(new_target) as image:
+            self.assertLess(image.convert("RGB").getpixel((128, 221))[0], 220)
+
+    def test_grounded_shadow_does_not_fill_gap_between_separate_items(self):
+        source = self.root / "separated-product.png"
+        image = Image.new("RGBA", (128, 96), (255, 255, 255, 0))
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((8, 15, 34, 80), fill=(255, 255, 255, 255))
+        draw.rectangle((94, 18, 120, 80), fill=(255, 255, 255, 255))
+        image.save(source)
+        target = self.root / "separated-grounded.png"
+        compose(source, self.background, target, recipe="grounded-v2")
+        with Image.open(target) as candidate:
+            rgb = candidate.convert("RGB")
+            self.assertLess(rgb.getpixel((55, 225))[0], 220)
+            self.assertEqual(rgb.getpixel((128, 225)), (220, 230, 240))
+
     def test_prompt_recipes_are_independent_and_references_default_to_empty(self):
         self.assertIn("透明背景 PNG", PRODUCT_SOURCE)
         self.assertEqual(product_source_prompt(), PRODUCT_SOURCE)

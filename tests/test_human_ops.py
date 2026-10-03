@@ -1,4 +1,9 @@
+import json
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 from factory.cli import parser
 from factory.human_ops import describe_run, describe_runtime, operator_contract
@@ -68,6 +73,21 @@ def approved_event(run_id, asset_id, sha256, *, mode="demo", **checks):
 
 
 class HumanOpsTests(unittest.TestCase):
+    def test_product_status_without_active_task_is_a_safe_empty_state(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            completed = subprocess.run(
+                [sys.executable, "-m", "factory", "--config", str(root / "absent.json"),
+                 "--state", str(root / "state"), "product-v1-status"],
+                capture_output=True, text=True, check=False,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        view = json.loads(completed.stdout)["result"]
+        self.assertEqual(view["phase"], "no_active_run")
+        self.assertEqual(view["allowed_actions"], [])
+        self.assertTrue(view["read_only"])
+        self.assertNotIn("runtime-init-demo", view["next_instruction"])
+
     def test_product_status_cli_is_read_only_surface(self):
         args = parser().parse_args(["product-v1-status", "--run", "RUN-READ-ONLY"])
         self.assertEqual(args.command, "product-v1-status")

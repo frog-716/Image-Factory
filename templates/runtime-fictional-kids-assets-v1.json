@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "category": "kids_shoes",
+  "run_id": "FICTIONAL-ASSET-REPLACE",
+  "mode": "demo",
+  "workflow_version": "fictional-kids-asset-batch-v1",
+  "max_image_calls": 6,
+  "steps": [
+    {
+      "id": "pair-left-profile",
+      "kind": "image_generate",
+      "depends_on": [],
+      "output_role": "product_rgba",
+      "independent_image_count": 1,
+      "visual_prompt": "基于所附既有虚构童鞋参考图，制作一张独立电商商品素材：同一双白色与浅蓝色儿童运动鞋的左侧正侧面视角。尽量保持鞋型、配色、鞋带、鞋底和材料纹理一致。完整可见，不裁切。真实商业产品摄影、柔和棚灯、真正透明的 PNG alpha 背景。不要白底、棋盘格、地面、人物、道具、文字、Logo、水印、价格或功能宣称。只输出单张图，不拼图。"
+    },
+    {
+      "id": "pair-front",
+      "kind": "image_generate",
+      "depends_on": ["pair-left-profile"],
+      "output_role": "product_rgba",
+      "independent_image_count": 1,
+      "visual_prompt": "基于所附既有虚构童鞋参考图，制作一张独立电商商品素材：同一双白色与浅蓝色儿童运动鞋，鞋头正对镜头的正面视角。保持鞋型、配色、鞋带、鞋底和材料纹理一致；左右鞋完整可见且留有少量间隔。真实商业产品摄影、柔和棚灯、真正透明的 PNG alpha 背景。不要白底、棋盘格、地面、人物、道具、文字、Logo、水印、价格或功能宣称。只输出单张图，不拼图。"
+    },
+    {
+      "id": "pair-rear",
+      "kind": "image_generate",
+      "depends_on": ["pair-front"],
+      "output_role": "product_rgba",
+      "independent_image_count": 1,
+      "visual_prompt": "基于所附既有虚构童鞋参考图，制作一张独立电商商品素材：同一双白色与浅蓝色儿童运动鞋，从鞋跟后方平视的背面视角。保持鞋型、配色、鞋底和材料纹理一致；两只鞋完整可见。真实商业产品摄影、柔和棚灯、真正透明的 PNG alpha 背景。不要白底、棋盘格、地面、人物、道具、文字、Logo、水印、价格或功能宣称。只输出单张图，不拼图。"
+    },
+    {
+      "id": "single-outsole",
+      "kind": "image_generate",
+      "depends_on": ["pair-rear"],
+      "output_role": "product_rgba",
+      "independent_image_count": 1,
+      "visual_prompt": "基于所附既有虚构童鞋参考图，制作一张独立电商商品素材：取其中一只浅蓝白色儿童运动鞋，把整只鞋翻转，正对镜头展示完整鞋底与防滑纹路。保持原鞋型、配色与鞋底厚度一致，展示真实材料而不添加功能图标或文字。真实商业产品摄影、柔和棚灯、真正透明的 PNG alpha 背景。不要白底、棋盘格、地面、人物、道具、Logo、水印、价格或功能宣称。只输出单张图，不拼图。"
+    },
+    {
+      "id": "pair-top",
+      "kind": "image_generate",
+      "depends_on": ["single-outsole"],
+      "output_role": "product_rgba",
+      "independent_image_count": 1,
+      "visual_prompt": "基于所附既有虚构童鞋参考图，制作一张独立电商商品素材：同一双白色与浅蓝色儿童运动鞋的垂直俯视图，清楚展示鞋带、鞋舌、鞋口和鞋面材质；两只鞋完整且分开。保持鞋型、配色和纹理一致。真实商业产品摄影、柔和棚灯、真正透明的 PNG alpha 背景。不要白底、棋盘格、地面、人物、道具、文字、Logo、水印、价格或功能宣称。只输出单张图，不拼图。"
+    },
+    {
+      "id": "upper-detail",
+      "kind": "image_generate",
+      "depends_on": ["pair-top"],
+      "output_role": "product_rgba",
+      "independent_image_count": 1,
+      "visual_prompt": "基于所附既有虚构童鞋参考图，制作一张独立电商商品细节素材：同一只浅蓝白色儿童运动鞋的鞋面与鞋带近景，能看清织物纹理、缝线、鞋带孔与柔软鞋口；仍需让整只鞋轮廓完整可见，不做无法辨认的极端裁切。保持原鞋型和配色一致。真实商业产品摄影、柔和棚灯、真正透明的 PNG alpha 背景。不要白底、棋盘格、地面、人物、道具、文字、Logo、水印、价格或功能宣称。只输出单张图，不拼图。"
+    }
+  ]
+}

@@ -104,21 +104,28 @@ class LarkCLI:
         if self.identity != "user":
             raise FactoryError("Human UI 不允许使用 bot 身份代替人工审核人。")
         argv = [self.bin, "auth", "status", "--json", "--verify"]
-        try:
-            result = subprocess.run(
-                argv, shell=False, capture_output=True, text=True, timeout=self.timeout
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise FactoryError("验证当前飞书用户身份超时；未启动 Human UI。") from exc
-        except OSError as exc:
-            raise FactoryError("无法启动 lark-cli 验证当前用户身份。") from exc
-        try:
-            value = json.loads(result.stdout if result.returncode == 0 else result.stderr)
-        except (TypeError, ValueError) as exc:
-            raise FactoryError("lark-cli 身份状态不是兼容 JSON。") from exc
-        if result.returncode != 0:
-            raise FactoryError("当前飞书 user 会话在线验证失败。")
-        return self.user_from_auth_status(value)
+        for attempt in range(2):
+            try:
+                result = subprocess.run(
+                    argv, shell=False, capture_output=True, text=True, timeout=self.timeout
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise FactoryError("验证当前飞书用户身份超时；未启动 Human UI。") from exc
+            except OSError as exc:
+                raise FactoryError("无法启动 lark-cli 验证当前用户身份。") from exc
+            try:
+                value = json.loads(result.stdout if result.returncode == 0 else result.stderr)
+            except (TypeError, ValueError) as exc:
+                raise FactoryError("lark-cli 身份状态不是兼容 JSON。") from exc
+            if result.returncode != 0:
+                raise FactoryError("当前飞书 user 会话在线验证失败。")
+            try:
+                return self.user_from_auth_status(value)
+            except FactoryError as exc:
+                if attempt or str(exc) != "当前飞书 user 会话未通过在线验证。":
+                    raise
+                time.sleep(0.5)
+        raise AssertionError("unreachable")
 
     @staticmethod
     def _run_process_group(argv: list[str], timeout: int):
